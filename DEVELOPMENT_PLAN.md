@@ -1,0 +1,80 @@
+# Development Plan - roblox-ts v3.1.0
+
+## 1. Overview
+*   **Current Version:** 3.0.0
+*   **Target Version:** 3.1.0
+*   **Focus:** TypeScript upgrade (5.6.2), support for new JS features (`using`, `Symbol.iterator`), technical debt reduction (prereq system), and critical bug fixes.
+
+## 2. Milestone 3.1.0 Goals
+These items are explicitly assigned to the v3.1.0 milestone on GitHub.
+
+### 🚀 New Features
+*   **#2807 Upgrade TypeScript to 5.6.2**
+    *   Bring the latest TS features and performance improvements.
+*   **#2616 Add support for `using` statements**
+    *   Implement TC39 Explicit Resource Management (Disposable pattern).
+*   **#1826 Handle `Symbol.iterator`**
+    *   Enable standard JS iteration protocols for better compatibility.
+*   **#2537 Deal with `Symbol.hasInstance` for `instanceof` operator**
+    *   Customize `instanceof` behavior using symbols.
+*   **#1829 Allow `LuaTuple` destructure assignment**
+    *   Syntactic sugar for handling Lua multi-return values closer to TS destructuring.
+*   **#2015 Custom Math Prototype**
+    *   Extensions or fixes to the Math object behavior.
+*   **#2811 `rbxtsc sourcemap` + `rbxtsc typegen`**
+    *   New CLI commands for better tooling integration.
+
+### 🛠 Technical Debt & Refactoring
+*   **#2729 Rewrite prereq system**
+    *   Overhaul the system handling compilation prerequisites for better stability/performance.
+*   **#2810 Convert include files to be `.luau`**
+    *   Move internal runtime files to native Luau format.
+*   **#2813 Transform `.d.ts` files in src with `typescript-transform-paths`**
+    *   Improve resolution of declaration files during build.
+
+## 3. Critical Bugs & Recent Issues (Triage Required)
+Issues not strictly in the milestone but critical for stability or recently reported.
+
+*   **🔥 Critical / High Priority**
+    *   **#2992 `rbxtsc -w` crashes when a file requires a .d.ts file in wrong location**
+        *   **Status:** Open
+        *   **Impact:** Crashes the watcher, severely affecting DX. Must be fixed.
+    *   **#2982 Map won't set if undefined value**
+        *   **Status:** Open
+        *   **Impact:** Runtime correctness. Violates JS Map semantics if verified.
+    *   **#2994 `.Title` is not a child of `DockWidgetPluginGui`**
+        *   **Status:** Open
+        *   **Impact:** Incorrect typings for Roblox API, causing false compile errors.
+
+*   **⚠️ Medium Priority / Investigation Needed**
+    *   **#2987 Support Rojo packages not in type roots**
+        *   **Status:** Open
+        *   **Impact:** Path resolution issue for certain project structures.
+    *   **#2930 Bun issue**
+        *   **Status:** Open
+        *   **Impact:** Compatibility with Bun runtime (growing in popularity).
+
+## 4. Proposed Action Plan
+
+### Phase 1: Stability & Critical Fixes (Immediate)
+1.  **Investigate & Fix #2992**: Watch mode crash is a blocker for efficient development.
+2.  **Verify #2982**: Confirm Map behavior bug and patch if necessary.
+3.  **Triage #2994**: Update API types if confirmed.
+
+### Phase 2: Core Milestone Implementation (In Progress)
+1.  **TS Upgrade (#2807)**: Should be prioritized as it may conflict with other changes.
+2.  **Runtime Features**: Implement `using` (#2616) and `Symbol` features (#1826, #2537).
+3.  **CLI Tools**: Finalize `sourcemap` and `typegen` commands (#2811).
+
+### Phase 3: Refactoring & Cleanup
+1.  **Prereq System (#2729)**: Execute rewrite after critical features are stable.
+2.  **Migration to .luau (#2810)**: Convert internal include files.
+
+### Phase 4: Release Prep
+1.  Run full test suite (`npm test`).
+2.  Update documentation/CHANGELOG.
+3.  Tag v3.1.0.
+
+## 5. Future Considerations (Backlog)
+*   **#2974 Proper compiler support for multiple projects (workspaces)**: Major architectural change, likely post-3.1.0.
+*   **#2641 Unit test support**: Native testing integration.
