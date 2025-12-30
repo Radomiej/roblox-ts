@@ -7,9 +7,11 @@ import { transformObjectAssignmentPattern } from "TSTransformer/nodes/binding/tr
 import { transformInitializer } from "TSTransformer/nodes/transformInitializer";
 import { transformWritableExpression } from "TSTransformer/nodes/transformWritable";
 import { getAccessorForBindingType } from "TSTransformer/util/binding/getAccessorForBindingType";
+import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
 import { getKindName } from "TSTransformer/util/getKindName";
 import { getSpreadDestructorForType } from "TSTransformer/util/spreadDestructuring";
 import { skipDownwards } from "TSTransformer/util/traversal";
+import { isDefinitelyType, isIterableType } from "TSTransformer/util/types";
 import ts from "typescript";
 
 export function transformArrayAssignmentPattern(
@@ -20,6 +22,20 @@ export function transformArrayAssignmentPattern(
 	let index = 0;
 	const idStack = new Array<luau.Identifier>();
 	const patternType = state.typeChecker.getTypeOfAssignmentPattern(assignmentPattern);
+
+	if (isDefinitelyType(patternType, isIterableType(state))) {
+		DiagnosticService.addDiagnostic(errors.noIterableIteration(assignmentPattern));
+		parentId = state.pushToVar(
+			luau.call(
+				luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+					expression: convertToIndexableExpression(parentId),
+					index: luau.property(state.TS(assignmentPattern, "Symbol"), "iterator"),
+				}),
+				[parentId],
+			),
+			"iterator",
+		);
+	}
 
 	const accessor = getAccessorForBindingType(state, assignmentPattern, patternType);
 	const destructor = getSpreadDestructorForType(state, assignmentPattern, patternType);

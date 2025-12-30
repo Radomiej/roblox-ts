@@ -60,6 +60,7 @@ export function transformArrayLiteralExpression(state: TransformState, node: ts.
 					lengthId,
 					amtElementsSinceUpdate,
 					shouldUpdateLengthId,
+					element.expression,
 				),
 			);
 		} else {

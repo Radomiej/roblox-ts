@@ -154,11 +154,9 @@ export function getAccessorForBindingType(state: TransformState, node: ts.Node, 
 		return iterableFunctionLuaTupleAccessor;
 	} else if (isDefinitelyType(type, isIterableFunctionType(state))) {
 		return iterableFunctionAccessor;
-	} else if (isDefinitelyType(type, isIterableType(state))) {
-		DiagnosticService.addDiagnostic(errors.noIterableIteration(node));
-		return () => luau.none();
 	} else if (
 		isDefinitelyType(type, isGeneratorType(state)) ||
+		isDefinitelyType(type, isIterableType(state)) ||
 		isDefinitelyType(type, isObjectType) ||
 		ts.isThis(node)
 	) {

@@ -10,6 +10,49 @@ local TS = {}
 
 TS.Promise = Promise
 
+local SymbolRegistry = {}
+local Symbol = setmetatable({}, {
+	__call = function(_, description)
+		local symbol = newproxy(true)
+		getmetatable(symbol).__tostring = function()
+			return "Symbol(" .. (description or "") .. ")"
+		end
+		return symbol
+	end,
+})
+
+TS.Symbol = Symbol
+
+function Symbol.for_(key)
+	if not SymbolRegistry[key] then
+		SymbolRegistry[key] = Symbol(key)
+	end
+	return SymbolRegistry[key]
+end
+
+function Symbol.keyFor(sym)
+	for key, value in pairs(SymbolRegistry) do
+		if value == sym then
+			return key
+		end
+	end
+end
+
+Symbol.iterator = Symbol("Symbol.iterator")
+Symbol.asyncIterator = Symbol("Symbol.asyncIterator")
+Symbol.hasInstance = Symbol("Symbol.hasInstance")
+Symbol.isConcatSpreadable = Symbol("Symbol.isConcatSpreadable")
+Symbol.match = Symbol("Symbol.match")
+Symbol.replace = Symbol("Symbol.replace")
+Symbol.search = Symbol("Symbol.search")
+Symbol.species = Symbol("Symbol.species")
+Symbol.split = Symbol("Symbol.split")
+Symbol.toPrimitive = Symbol("Symbol.toPrimitive")
+Symbol.toStringTag = Symbol("Symbol.toStringTag")
+Symbol.unscopables = Symbol("Symbol.unscopables")
+Symbol.dispose = Symbol("Symbol.dispose")
+Symbol.asyncDispose = Symbol("Symbol.asyncDispose")
+
 TS.__undefined = {}
 
 local function isPlugin(context)
@@ -112,8 +155,14 @@ end
 
 function TS.instanceof(obj, class)
 	-- custom Class.instanceof() check
-	if type(class) == "table" and type(class.instanceof) == "function" then
-		return class.instanceof(obj)
+	if type(class) == "table" then
+		local hasInstance = class[Symbol.hasInstance]
+		if type(hasInstance) == "function" then
+			return hasInstance(class, obj)
+		end
+		if type(class.instanceof) == "function" then
+			return class.instanceof(obj)
+		end
 	end
 
 	-- metatable check

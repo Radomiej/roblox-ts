@@ -22,16 +22,13 @@ export const objectAccessor = (
 			expression: parentId,
 			index: addOneIfArrayType(state, type, transformExpression(state, name.expression)),
 		});
-	} else if (ts.isNumericLiteral(name) || ts.isStringLiteral(name) || ts.isNoSubstitutionTemplateLiteral(name)) {
+	} else if (ts.isNumericLiteral(name) || ts.isStringLiteral(name) || ts.isNoSubstitutionTemplateLiteral(name) || ts.isBigIntLiteral(name)) {
 		return luau.create(luau.SyntaxKind.ComputedIndexExpression, {
 			expression: parentId,
 			index: transformExpression(state, name),
 		});
 	} else if (ts.isPrivateIdentifier(name)) {
 		DiagnosticService.addDiagnostic(errors.noPrivateIdentifier(name));
-		return luau.none();
-	} else if (ts.isBigIntLiteral(name)) {
-		DiagnosticService.addDiagnostic(errors.noBigInt(name));
 		return luau.none();
 	}
 	return assertNever(name, "objectAccessor");

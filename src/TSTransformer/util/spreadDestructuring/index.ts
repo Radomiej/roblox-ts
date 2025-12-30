@@ -5,7 +5,14 @@ import { spreadDestructureArray } from "TSTransformer/util/spreadDestructuring/s
 import { spreadDestructureGenerator } from "TSTransformer/util/spreadDestructuring/spreadDestructureGenerator";
 import { spreadDestructureMap } from "TSTransformer/util/spreadDestructuring/spreadDestructureMap";
 import { spreadDestructureSet } from "TSTransformer/util/spreadDestructuring/spreadDestructureSet";
-import { isArrayType, isDefinitelyType, isGeneratorType, isMapType, isSetType } from "TSTransformer/util/types";
+import {
+	isArrayType,
+	isDefinitelyType,
+	isGeneratorType,
+	isIterableType,
+	isMapType,
+	isSetType,
+} from "TSTransformer/util/types";
 import ts from "typescript";
 
 export * from "TSTransformer/util/spreadDestructuring/spreadDestructureArray";
@@ -27,7 +34,7 @@ export function getSpreadDestructorForType(state: TransformState, node: ts.Node,
 		return spreadDestructureSet;
 	} else if (isDefinitelyType(type, isMapType(state))) {
 		return spreadDestructureMap;
-	} else if (isDefinitelyType(type, isGeneratorType(state))) {
+	} else if (isDefinitelyType(type, isGeneratorType(state)) || isDefinitelyType(type, isIterableType(state))) {
 		return spreadDestructureGenerator;
 	}
 

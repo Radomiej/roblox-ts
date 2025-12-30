@@ -1,10 +1,14 @@
 import luau from "@roblox-ts/luau-ast";
+import { errors } from "Shared/diagnostics";
 import { TransformState } from "TSTransformer";
+import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
 import { transformObjectBindingPattern } from "TSTransformer/nodes/binding/transformObjectBindingPattern";
 import { transformVariable } from "TSTransformer/nodes/statements/transformVariableStatement";
 import { transformInitializer } from "TSTransformer/nodes/transformInitializer";
 import { getAccessorForBindingType } from "TSTransformer/util/binding/getAccessorForBindingType";
+import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
 import { getSpreadDestructorForType } from "TSTransformer/util/spreadDestructuring";
+import { isDefinitelyType, isIterableType } from "TSTransformer/util/types";
 import { validateNotAnyType } from "TSTransformer/util/validateNotAny";
 import ts from "typescript";
 
@@ -17,8 +21,24 @@ export function transformArrayBindingPattern(
 
 	let index = 0;
 	const idStack = new Array<luau.AnyIdentifier>();
-	const accessor = getAccessorForBindingType(state, bindingPattern, state.getType(bindingPattern));
-	const destructor = getSpreadDestructorForType(state, bindingPattern, state.getType(bindingPattern));
+	const patternType = state.getType(bindingPattern);
+
+	if (isDefinitelyType(patternType, isIterableType(state))) {
+		DiagnosticService.addDiagnostic(errors.noIterableIteration(bindingPattern));
+		parentId = state.pushToVar(
+			luau.call(
+				luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+					expression: convertToIndexableExpression(parentId),
+					index: luau.property(state.TS(bindingPattern, "Symbol"), "iterator"),
+				}),
+				[parentId],
+			),
+			"iterator",
+		);
+	}
+
+	const accessor = getAccessorForBindingType(state, bindingPattern, patternType);
+	const destructor = getSpreadDestructorForType(state, bindingPattern, patternType);
 
 	for (const element of bindingPattern.elements) {
 		if (ts.isOmittedExpression(element)) {
