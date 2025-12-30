@@ -61,6 +61,22 @@ Issues not strictly in the milestone but critical for stability or recently repo
 2.  **Verify #2982**: Confirm Map behavior bug and patch if necessary.
 3.  **Triage #2994**: Update API types if confirmed.
 
+### Phase 1.5: Quick Wins & Fixes (Review & Merge Candidates)
+PRs that address specific bugs or correctness issues and appear ready for testing/merge.
+
+*   **#2970 fix: $range adding `or 1` to the step** (AsynchronousAI)
+    *   Fixes logic when step is negative in range macro.
+*   **#2991 Fix transformer order** (ari-party)
+    *   Ensures correct execution order of compiler transformers.
+*   **#2917 fix: evaluate case expressions only once** (eiei114)
+    *   Corrects switch statement behavior to match JS semantics (avoid re-evaluation).
+*   **#2962 fix: ban indexing length in tuples** (wad4444)
+    *   Prevents incorrect access to length property on LuaTuples.
+*   **#2887 Fix "return nil" generation for complexly named files** (camren-m)
+    *   Fixes codegen edge case for file naming.
+*   **#2846 Fix transformer diagnostic spans** (Fireboltofdeath)
+    *   Improves error reporting locations.
+
 ### Phase 2: Core Milestone Implementation (In Progress)
 1.  **TS Upgrade (#2807)**: Should be prioritized as it may conflict with other changes.
 2.  **Runtime Features**: Implement `using` (#2616) and `Symbol` features (#1826, #2537).
