@@ -181,7 +181,7 @@ local function createAdvancer(traceback, callback, resolve, reject)
 		local ok, resultLength, result = runExecutor(traceback, callback, ...)
 
 		if ok then
-			resolve(unpack(result, 1, resultLength))
+			resolve(table.unpack(result, 1, resultLength))
 		else
 			reject(result[1])
 		end
@@ -221,7 +221,6 @@ local Promise = {
 	Error = Error,
 	Status = makeEnum("Promise.Status", { "Started", "Resolved", "Rejected", "Cancelled" }),
 	_getTime = os.clock,
-	_timeEvent = game:GetService("RunService").Heartbeat,
 	_unhandledRejectionCallbacks = {},
 }
 Promise.prototype = {}
@@ -318,7 +317,7 @@ end
 	```lua
 	local myFunction()
 		return Promise.new(function(resolve, reject, onCancel)
-			wait(1)
+			task.wait(1)
 			resolve("Hello world!")
 		end)
 	end
@@ -357,7 +356,7 @@ end
 --[=[
 	The same as [Promise.new](/api/Promise#new), except execution begins after the next `Heartbeat` event.
 
-	This is a spiritual replacement for `spawn`, but it does not suffer from the same [issues](https://eryn.io/gist/3db84579866c099cdd5bb2ff37947cec) as `spawn`.
+	This is a spiritual replacement for `task.defer`, but it does not suffer from the same [issues](https://eryn.io/gist/3db84579866c099cdd5bb2ff37947cec) as `spawn`.
 
 	```lua
 	local function waitForChild(instance, childName, timeout)
@@ -376,14 +375,16 @@ function Promise.defer(executor)
 	local traceback = debug.traceback(nil, 2)
 	local promise
 	promise = Promise._new(traceback, function(resolve, reject, onCancel)
-		local connection
-		connection = Promise._timeEvent:Connect(function()
-			connection:Disconnect()
+		local thread = task.defer(function()
 			local ok, _, result = runExecutor(traceback, executor, resolve, reject, onCancel)
 
 			if not ok then
 				reject(result[1])
 			end
+		end)
+
+		onCancel(function()
+			task.cancel(thread)
 		end)
 	end)
 
@@ -418,7 +419,7 @@ Promise.async = Promise.defer
 function Promise.resolve(...)
 	local length, values = pack(...)
 	return Promise._new(debug.traceback(nil, 2), function(resolve)
-		resolve(unpack(values, 1, length))
+		resolve(table.unpack(values, 1, length))
 	end)
 end
 
@@ -435,7 +436,7 @@ end
 function Promise.reject(...)
 	local length, values = pack(...)
 	return Promise._new(debug.traceback(nil, 2), function(_, reject)
-		reject(unpack(values, 1, length))
+		reject(table.unpack(values, 1, length))
 	end)
 end
 
@@ -447,7 +448,7 @@ function Promise._try(traceback, callback, ...)
 	local valuesLength, values = pack(...)
 
 	return Promise._new(traceback, function(resolve)
-		resolve(callback(unpack(values, 1, valuesLength)))
+		resolve(callback(table.unpack(values, 1, valuesLength)))
 	end)
 end
 
@@ -1003,7 +1004,7 @@ end
 	:::
 
 	```lua
-	local sleep = Promise.promisify(wait)
+	local sleep = Promise.promisify(task.wait)
 
 	sleep(1):andThen(print)
 	```
@@ -1026,7 +1027,7 @@ end
 --[=[
 	Returns a Promise that resolves after `seconds` seconds have passed. The Promise resolves with the actual amount of time that was waited.
 
-	This function is **not** a wrapper around `wait`. `Promise.delay` uses a custom scheduler which provides more accurate timing. As an optimization, cancelling this Promise instantly removes the task from the scheduler.
+	This function is **not** a wrapper around `task.wait`. `Promise.delay` uses a custom scheduler which provides more accurate timing. As an optimization, cancelling this Promise instantly removes the task from the scheduler.
 
 	:::warning
 	Passing `NaN`, infinity, or a number less than 1/60 is equivalent to passing 1/60.
@@ -1051,89 +1052,19 @@ do
 	function Promise.delay(seconds)
 		assert(type(seconds) == "number", "Bad argument #1 to Promise.delay, must be a number.")
 		-- If seconds is -INF, INF, NaN, or less than 1 / 60, assume seconds is 1 / 60.
-		-- This mirrors the behavior of wait()
+		-- This mirrors the behavior of task.wait()
 		if not (seconds >= 1 / 60) or seconds == math.huge then
 			seconds = 1 / 60
 		end
 
 		return Promise._new(debug.traceback(nil, 2), function(resolve, _, onCancel)
 			local startTime = Promise._getTime()
-			local endTime = startTime + seconds
-
-			local node = {
-				resolve = resolve,
-				startTime = startTime,
-				endTime = endTime,
-			}
-
-			if connection == nil then -- first is nil when connection is nil
-				first = node
-				connection = Promise._timeEvent:Connect(function()
-					local threadStart = Promise._getTime()
-
-					while first ~= nil and first.endTime < threadStart do
-						local current = first
-						first = current.next
-
-						if first == nil then
-							connection:Disconnect()
-							connection = nil
-						else
-							first.previous = nil
-						end
-
-						current.resolve(Promise._getTime() - current.startTime)
-					end
-				end)
-			else -- first is non-nil
-				if first.endTime < endTime then -- if `node` should be placed after `first`
-					-- we will insert `node` between `current` and `next`
-					-- (i.e. after `current` if `next` is nil)
-					local current = first
-					local next = current.next
-
-					while next ~= nil and next.endTime < endTime do
-						current = next
-						next = current.next
-					end
-
-					-- `current` must be non-nil, but `next` could be `nil` (i.e. last item in list)
-					current.next = node
-					node.previous = current
-
-					if next ~= nil then
-						node.next = next
-						next.previous = node
-					end
-				else
-					-- set `node` to `first`
-					node.next = first
-					first.previous = node
-					first = node
-				end
-			end
+			local thread = task.delay(seconds, function()
+				resolve(Promise._getTime() - startTime)
+			end)
 
 			onCancel(function()
-				-- remove node from queue
-				local next = node.next
-
-				if first == node then
-					if next == nil then -- if `node` is the first and last
-						connection:Disconnect()
-						connection = nil
-					else -- if `node` is `first` and not the last
-						next.previous = nil
-					end
-					first = next
-				else
-					local previous = node.previous
-					-- since `node` is not `first`, then we know `previous` is non-nil
-					previous.next = next
-
-					if next ~= nil then
-						next.previous = previous
-					end
-				end
+				task.cancel(thread)
 			end)
 		end)
 	end
@@ -1251,10 +1182,10 @@ function Promise.prototype:_andThen(traceback, successHandler, failureHandler)
 			end)
 		elseif self._status == Promise.Status.Resolved then
 			-- This promise has already resolved! Trigger success immediately.
-			successCallback(unpack(self._values, 1, self._valuesLength))
+			successCallback(table.unpack(self._values, 1, self._valuesLength))
 		elseif self._status == Promise.Status.Rejected then
 			-- This promise died a terrible death! Trigger failure immediately.
-			failureCallback(unpack(self._values, 1, self._valuesLength))
+			failureCallback(table.unpack(self._values, 1, self._valuesLength))
 		end
 	end, self)
 end
@@ -1336,7 +1267,7 @@ function Promise.prototype:tap(tapHandler)
 		if Promise.is(callbackReturn) then
 			local length, values = pack(...)
 			return callbackReturn:andThen(function()
-				return unpack(values, 1, length)
+				return table.unpack(values, 1, length)
 			end)
 		end
 
@@ -1367,7 +1298,7 @@ function Promise.prototype:andThenCall(callback, ...)
 	assert(isCallable(callback), string.format(ERROR_NON_FUNCTION, "Promise:andThenCall"))
 	local length, values = pack(...)
 	return self:_andThen(debug.traceback(nil, 2), function()
-		return callback(unpack(values, 1, length))
+		return callback(table.unpack(values, 1, length))
 	end)
 end
 
@@ -1396,7 +1327,7 @@ end
 function Promise.prototype:andThenReturn(...)
 	local length, values = pack(...)
 	return self:_andThen(debug.traceback(nil, 2), function()
-		return unpack(values, 1, length)
+		return table.unpack(values, 1, length)
 	end)
 end
 
@@ -1574,7 +1505,7 @@ function Promise.prototype:finallyCall(callback, ...)
 	assert(isCallable(callback), string.format(ERROR_NON_FUNCTION, "Promise:finallyCall"))
 	local length, values = pack(...)
 	return self:_finally(debug.traceback(nil, 2), function()
-		return callback(unpack(values, 1, length))
+		return callback(table.unpack(values, 1, length))
 	end)
 end
 
@@ -1599,7 +1530,7 @@ end
 function Promise.prototype:finallyReturn(...)
 	local length, values = pack(...)
 	return self:_finally(debug.traceback(nil, 2), function()
-		return unpack(values, 1, length)
+		return table.unpack(values, 1, length)
 	end)
 end
 
@@ -1630,9 +1561,9 @@ function Promise.prototype:awaitStatus()
 	end
 
 	if self._status == Promise.Status.Resolved then
-		return self._status, unpack(self._values, 1, self._valuesLength)
+		return self._status, table.unpack(self._values, 1, self._valuesLength)
 	elseif self._status == Promise.Status.Rejected then
-		return self._status, unpack(self._values, 1, self._valuesLength)
+		return self._status, table.unpack(self._values, 1, self._valuesLength)
 	end
 
 	return self._status
@@ -1721,7 +1652,7 @@ function Promise.prototype:_unwrap()
 
 	local success = self._status == Promise.Status.Resolved
 
-	return success, unpack(self._values, 1, self._valuesLength)
+	return success, table.unpack(self._values, 1, self._valuesLength)
 end
 
 function Promise.prototype:_resolve(...)
@@ -1829,7 +1760,7 @@ function Promise.prototype:_reject(...)
 			local message = string.format("Unhandled Promise rejection:\n\n%s\n\n%s", err, self._source)
 
 			for _, callback in ipairs(Promise._unhandledRejectionCallbacks) do
-				task.spawn(callback, self, unpack(self._values, 1, self._valuesLength))
+				task.spawn(callback, self, table.unpack(self._values, 1, self._valuesLength))
 			end
 
 			if Promise.TEST then
@@ -1939,7 +1870,7 @@ function Promise.retry(callback, times, ...)
 
 	return Promise.resolve(callback(...)):catch(function(...)
 		if times > 0 then
-			return Promise.retry(callback, times - 1, unpack(args, 1, length))
+			return Promise.retry(callback, times - 1, table.unpack(args, 1, length))
 		else
 			return Promise.reject(...)
 		end
@@ -1970,7 +1901,7 @@ function Promise.retryWithDelay(callback, times, seconds, ...)
 		if times > 0 then
 			Promise.delay(seconds):await()
 
-			return Promise.retryWithDelay(callback, times - 1, seconds, unpack(args, 1, length))
+			return Promise.retryWithDelay(callback, times - 1, seconds, table.unpack(args, 1, length))
 		else
 			return Promise.reject(...)
 		end

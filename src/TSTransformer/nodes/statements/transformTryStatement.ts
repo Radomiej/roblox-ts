@@ -150,7 +150,7 @@ function transformFlowControl(
 				condition: createFlowControlCondition(state, node, exitTypeId, "TRY_RETURN"),
 				statements: luau.list.make(
 					luau.create(luau.SyntaxKind.ReturnStatement, {
-						expression: luau.call(luau.globals.unpack, [returnsId]),
+						expression: luau.call(luau.globals.table.unpack, [returnsId]),
 					}),
 				),
 			});

@@ -101,6 +101,31 @@ export = () => {
 		expect(called).to.equal(1);
 	});
 
+	it("should support map constructor with undefined values", () => {
+		const map = new Map<string, string | undefined>([["a", undefined]]);
+		expect(map.has("a")).to.equal(true);
+		expect(map.get("a")).never.to.be.ok();
+	});
+
+	it("should support size/delete/clear with undefined values", () => {
+		const map = new Map<string, string | undefined>();
+		expect(map.size()).to.equal(0);
+
+		map.set("a", undefined);
+		expect(map.has("a")).to.equal(true);
+		expect(map.size()).to.equal(1);
+
+		expect(map.delete("a")).to.equal(true);
+		expect(map.has("a")).to.equal(false);
+		expect(map.size()).to.equal(0);
+
+		map.set("a", undefined);
+		map.set("b", "ok");
+		expect(map.size()).to.equal(2);
+		map.clear();
+		expect(map.size()).to.equal(0);
+	});
+
 	it("should support constructor parameters", () => {
 		const arr: ReadonlyArray<[string, number]> = [
 			["a", 1],

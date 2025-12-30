@@ -140,7 +140,7 @@ function TS.async(callback)
 		local n = select("#", ...)
 		local args = { ... }
 		return Promise.new(function(resolve, reject)
-			local ok, result = pcall(callback, unpack(args, 1, n))
+			local ok, result = pcall(callback, table.unpack(args, 1, n))
 			if ok then
 				resolve(result)
 			else

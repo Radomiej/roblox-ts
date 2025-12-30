@@ -7,7 +7,7 @@ export function transformJsxExpression(state: TransformState, node: ts.JsxExpres
 	if (node.expression) {
 		const expression = transformExpression(state, node.expression);
 		if (node.dotDotDotToken) {
-			return luau.call(luau.globals.unpack, [expression]);
+			return luau.call(luau.globals.table.unpack, [expression]);
 		}
 		return expression;
 	}

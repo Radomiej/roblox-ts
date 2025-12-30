@@ -76,11 +76,17 @@ PRs that address specific bugs or correctness issues and appear ready for testin
     *   Fixes codegen edge case for file naming.
 *   **#2846 Fix transformer diagnostic spans** (Fireboltofdeath)
     *   Improves error reporting locations.
+*   **Update Runtime & Compiler to use modern Roblox APIs** (Implemented)
+    *   Replaced deprecated `wait`, `spawn`, `delay` with `task` library in `Promise.lua` and `RuntimeLib.lua`.
+    *   Replaced global `unpack` with `table.unpack` in compiler output and runtime.
 
 ### Phase 2: Core Milestone Implementation (In Progress)
 1.  **TS Upgrade (#2807)**: Should be prioritized as it may conflict with other changes.
 2.  **Runtime Features**: Implement `using` (#2616) and `Symbol` features (#1826, #2537).
 3.  **CLI Tools**: Finalize `sourcemap` and `typegen` commands (#2811).
+4.  **Update Runtime & Compiler to use modern Roblox APIs** (Implemented)
+    *   Replaced deprecated `wait`, `spawn`, `delay` with `task` library in `Promise.lua` and `RuntimeLib.lua`.
+    *   Replaced global `unpack` with `table.unpack` in compiler output and runtime.
 
 ### Phase 3: Refactoring & Cleanup
 1.  **Prereq System (#2729)**: Execute rewrite after critical features are stable.

@@ -44,7 +44,7 @@ export function transformReturnStatementInner(
 			if (luau.isArray(expression)) {
 				expression = expression.members;
 			} else {
-				expression = luau.call(luau.globals.unpack, [expression]);
+				expression = luau.call(luau.globals.table.unpack, [expression]);
 			}
 		}
 	}

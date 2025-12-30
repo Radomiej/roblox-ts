@@ -13,6 +13,7 @@ import { transformWritableExpression } from "TSTransformer/nodes/transformWritab
 import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
 import { ensureTransformOrder } from "TSTransformer/util/ensureTransformOrder";
 import { getKindName } from "TSTransformer/util/getKindName";
+import { getLiteralNumberValue } from "TSTransformer/util/getLiteralNumberValue";
 import { getStatements } from "TSTransformer/util/getStatements";
 import { skipDownwards } from "TSTransformer/util/traversal";
 import {

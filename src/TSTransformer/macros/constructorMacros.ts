@@ -13,6 +13,14 @@ function wrapWeak(state: TransformState, node: ts.NewExpression, macro: Construc
 	]);
 }
 
+function wrapUndefinedMapValue(state: TransformState, node: ts.Node, value: luau.Expression) {
+	return luau.create(luau.SyntaxKind.IfExpression, {
+		condition: luau.binary(value, "==", luau.nil()),
+		expression: state.TS(node, "__undefined"),
+		alternative: value,
+	});
+}
+
 const ArrayConstructor: ConstructorMacro = (state, node) => {
 	if (node.arguments && node.arguments.length > 0) {
 		const args = ensureTransformOrder(state, node.arguments);
@@ -63,7 +71,10 @@ const MapConstructor: ConstructorMacro = (state, node) => {
 			// non-null and type assertion because array will always have 2 members,
 			// due to map constructor typing
 			assert(luau.isArray(e) && luau.list.isNonEmpty(e.members));
-			return [e.members.head.value, e.members.head.next!.value] as [luau.Expression, luau.Expression];
+			return [
+				e.members.head.value,
+				wrapUndefinedMapValue(state, node, e.members.head.next!.value),
+			] as [luau.Expression, luau.Expression];
 		});
 		return luau.map(elements);
 	} else {
@@ -83,10 +94,14 @@ const MapConstructor: ConstructorMacro = (state, node) => {
 							}),
 						}),
 						operator: "=",
-						right: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-							expression: valueId,
-							index: luau.number(2),
-						}),
+						right: wrapUndefinedMapValue(
+							state,
+							node,
+							luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+								expression: valueId,
+								index: luau.number(2),
+							}),
+						),
 					}),
 				),
 			}),
