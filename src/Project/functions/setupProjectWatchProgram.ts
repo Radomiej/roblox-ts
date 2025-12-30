@@ -18,6 +18,7 @@ import { walkDirectorySync } from "Project/util/walkDirectorySync";
 import { DTS_EXT } from "Shared/constants";
 import { DiagnosticError } from "Shared/errors/DiagnosticError";
 import { assert } from "Shared/util/assert";
+import { createTextDiagnostic } from "Shared/util/createTextDiagnostic";
 import { getRootDirs } from "Shared/util/getRootDirs";
 import ts from "typescript";
 
@@ -196,7 +197,11 @@ export function setupProjectWatchProgram(data: ProjectData, usePolling: boolean)
 					diagnostics: e.diagnostics,
 				};
 			} else {
-				throw e;
+				const errorText = e instanceof Error ? e.stack || e.message : String(e);
+				return {
+					emitSkipped: true,
+					diagnostics: [createTextDiagnostic(`Unexpected error during compilation: ${errorText}`)],
+				};
 			}
 		}
 	}

@@ -57,9 +57,12 @@ Issues not strictly in the milestone but critical for stability or recently repo
 ## 4. Proposed Action Plan
 
 ### Phase 1: Stability & Critical Fixes (Immediate)
-1.  **Investigate & Fix #2992**: Watch mode crash is a blocker for efficient development.
-2.  **Verify #2982**: Confirm Map behavior bug and patch if necessary.
-3.  **Triage #2994**: Update API types if confirmed.
+1.  **Investigate & Fix #2992**: Watch mode crash is a blocker for efficient development. - **Fixed**
+    *   Added error handling in `setupProjectWatchProgram.ts` to report unexpected errors as diagnostics instead of crashing.
+2.  **Verify #2982**: Confirm Map behavior bug and patch if necessary. - **Verified**
+    *   Map tests pass, including undefined value handling. Double evaluation bug in Map constructor was fixed.
+3.  **Triage #2994**: Update API types if confirmed. - **Investigated**
+    *   `Title` property exists on `DockWidgetPluginGui` (inherited from `PluginGui` or `LayerCollector`?). Confirmed definitions present in `@rbxts/types`.
 
 ### Phase 1.5: Quick Wins & Fixes (Review & Merge Candidates)
 PRs that address specific bugs or correctness issues and appear ready for testing/merge.
