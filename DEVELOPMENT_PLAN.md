@@ -64,17 +64,17 @@ Issues not strictly in the milestone but critical for stability or recently repo
 ### Phase 1.5: Quick Wins & Fixes (Review & Merge Candidates)
 PRs that address specific bugs or correctness issues and appear ready for testing/merge.
 
-*   **#2970 fix: $range adding `or 1` to the step** (AsynchronousAI)
+*   **#2970 fix: $range adding `or 1` to the step** (AsynchronousAI) - **Merged**
     *   Fixes logic when step is negative in range macro.
-*   **#2991 Fix transformer order** (ari-party)
+*   **#2991 Fix transformer order** (ari-party) - **Merged**
     *   Ensures correct execution order of compiler transformers.
-*   **#2917 fix: evaluate case expressions only once** (eiei114)
+*   **#2917 fix: evaluate case expressions only once** (eiei114) - **Merged**
     *   Corrects switch statement behavior to match JS semantics (avoid re-evaluation).
-*   **#2962 fix: ban indexing length in tuples** (wad4444)
+*   **#2962 fix: ban indexing length in tuples** (wad4444) - **Merged**
     *   Prevents incorrect access to length property on LuaTuples.
-*   **#2887 Fix "return nil" generation for complexly named files** (camren-m)
+*   **#2887 Fix "return nil" generation for complexly named files** (camren-m) - **Merged**
     *   Fixes codegen edge case for file naming.
-*   **#2846 Fix transformer diagnostic spans** (Fireboltofdeath)
+*   **#2846 Fix transformer diagnostic spans** (Fireboltofdeath) - **Merged**
     *   Improves error reporting locations.
 *   **Update Runtime & Compiler to use modern Roblox APIs** (Implemented)
     *   Replaced deprecated `wait`, `spawn`, `delay` with `task` library in `Promise.lua` and `RuntimeLib.lua`.

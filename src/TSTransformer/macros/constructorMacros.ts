@@ -14,6 +14,9 @@ function wrapWeak(state: TransformState, node: ts.NewExpression, macro: Construc
 }
 
 function wrapUndefinedMapValue(state: TransformState, node: ts.Node, value: luau.Expression) {
+	if (!luau.isSimple(value)) {
+		value = state.pushToVar(value, "value");
+	}
 	return luau.create(luau.SyntaxKind.IfExpression, {
 		condition: luau.binary(value, "==", luau.nil()),
 		expression: state.TS(node, "__undefined"),
@@ -80,30 +83,41 @@ const MapConstructor: ConstructorMacro = (state, node) => {
 	} else {
 		const id = state.pushToVar(luau.map(), "map");
 		const valueId = luau.tempId("v");
+		const elementValueId = luau.tempId("value");
+		const loopStatements = luau.list.make<luau.Statement>();
+		luau.list.push(
+			loopStatements,
+			luau.create(luau.SyntaxKind.VariableDeclaration, {
+				left: elementValueId,
+				right: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+					expression: valueId,
+					index: luau.number(2),
+				}),
+			}),
+		);
+		luau.list.push(
+			loopStatements,
+			luau.create(luau.SyntaxKind.Assignment, {
+				left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+					expression: id,
+					index: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+						expression: valueId,
+						index: luau.number(1),
+					}),
+				}),
+				operator: "=",
+				right: luau.create(luau.SyntaxKind.IfExpression, {
+					condition: luau.binary(elementValueId, "==", luau.nil()),
+					expression: state.TS(node, "__undefined"),
+					alternative: elementValueId,
+				}),
+			}),
+		);
 		state.prereq(
 			luau.create(luau.SyntaxKind.ForStatement, {
 				ids: luau.list.make<luau.AnyIdentifier>(luau.tempId(), valueId),
 				expression: transformed,
-				statements: luau.list.make(
-					luau.create(luau.SyntaxKind.Assignment, {
-						left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-							expression: id,
-							index: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-								expression: valueId,
-								index: luau.number(1),
-							}),
-						}),
-						operator: "=",
-						right: wrapUndefinedMapValue(
-							state,
-							node,
-							luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-								expression: valueId,
-								index: luau.number(2),
-							}),
-						),
-					}),
-				),
+				statements: loopStatements,
 			}),
 		);
 		return id;
