@@ -79,6 +79,8 @@ PRs that address specific bugs or correctness issues and appear ready for testin
     *   Fixes codegen edge case for file naming.
 *   **#2846 Fix transformer diagnostic spans** (Fireboltofdeath) - **Merged**
     *   Improves error reporting locations.
+*   **#2975 Update linting configuration** (Cascade) - **Merged**
+    *   Updated to ESLint 9, TypeScript 5.9, consolidated tsconfigs, and added caching for CI speed improvements.
 *   **Update Runtime & Compiler to use modern Roblox APIs** (Implemented)
     *   Replaced deprecated `wait`, `spawn`, `delay` with `task` library in `Promise.lua` and `RuntimeLib.lua`.
     *   Replaced global `unpack` with `table.unpack` in compiler output and runtime.
