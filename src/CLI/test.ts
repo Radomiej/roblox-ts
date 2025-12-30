@@ -41,7 +41,6 @@ describe("should compile tests project", () => {
 	const diagnosticsFolder = path.join(PACKAGE_ROOT, "tests", "src", "diagnostics");
 
 	const sourceFiles = getChangedSourceFiles(program);
-	console.log("Files to compile:", sourceFiles.map(sf => path.relative(process.cwd(), sf.fileName)).join(", "));
 
 	for (const sourceFile of sourceFiles) {
 		const fileName = path.relative(process.cwd(), sourceFile.fileName);
@@ -56,9 +55,7 @@ describe("should compile tests project", () => {
 			const expectedId = (errors[diagnosticName] as DiagnosticFactory).id;
 			it(`should compile ${fileName} and report diagnostic ${diagnosticName}`, done => {
 				process.env.ROBLOX_TS_EXPECTED_DIAGNOSTIC_ID = String(expectedId);
-				fs.appendFileSync("debug_log.txt", `Compiling Diagnostic: ${fileName}\n`);
 				const emitResult = compileFiles(program.getProgram(), data, pathTranslator, [sourceFile]);
-				fs.appendFileSync("debug_log.txt", `Finished Diagnostic: ${fileName}\n`);
 				delete process.env.ROBLOX_TS_EXPECTED_DIAGNOSTIC_ID;
 				if (
 					emitResult.diagnostics.length > 0 &&
@@ -66,24 +63,16 @@ describe("should compile tests project", () => {
 				) {
 					done();
 				} else if (emitResult.diagnostics.length === 0) {
-					const msg = `Expected diagnostic ${diagnosticName} to be reported.`;
-					fs.appendFileSync("debug_log.txt", `FAILURE: ${fileName} - ${msg}\n`);
-					done(new Error(msg));
+					done(new Error(`Expected diagnostic ${diagnosticName} to be reported.`));
 				} else {
-					const msg = "Unexpected diagnostics:\n" + formatDiagnostics(emitResult.diagnostics);
-					fs.appendFileSync("debug_log.txt", `FAILURE: ${fileName} - ${msg}\n`);
-					done(new Error(msg));
+					done(new Error("Unexpected diagnostics:\n" + formatDiagnostics(emitResult.diagnostics)));
 				}
 			});
 		} else {
 			it(`should compile ${fileName}`, done => {
-				fs.appendFileSync("debug_log.txt", `Compiling: ${fileName}\n`);
 				const emitResult = compileFiles(program.getProgram(), data, pathTranslator, [sourceFile]);
-				fs.appendFileSync("debug_log.txt", `Finished: ${fileName}\n`);
 				if (emitResult.diagnostics.length > 0) {
-					const msg = "\n" + formatDiagnostics(emitResult.diagnostics);
-					fs.appendFileSync("debug_log.txt", `FAILURE: ${fileName} - ${msg}\n`);
-					done(new Error(msg));
+					done(new Error("\n" + formatDiagnostics(emitResult.diagnostics)));
 				} else {
 					done();
 				}

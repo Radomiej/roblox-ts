@@ -24,7 +24,7 @@ export function transformArrayBindingPattern(
 	const patternType = state.getType(bindingPattern);
 
 	if (isDefinitelyType(patternType, isIterableType(state))) {
-		DiagnosticService.addDiagnostic(errors.noIterableIteration(bindingPattern));
+		DiagnosticService.addDiagnostic(errors.noIterableDestructuring(bindingPattern));
 		parentId = state.pushToVar(
 			luau.call(
 				luau.create(luau.SyntaxKind.ComputedIndexExpression, {

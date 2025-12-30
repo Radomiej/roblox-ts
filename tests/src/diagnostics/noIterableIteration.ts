@@ -1,2 +1,3 @@
-const iter: Iterable<string> = [] as unknown as Iterable<string>;
-const [a] = iter;
+declare const iter: Iterable<string>;
+declare let a: string;
+[a] = iter;

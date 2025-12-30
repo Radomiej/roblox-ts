@@ -8,7 +8,7 @@ import { transformVariable } from "TSTransformer/nodes/statements/transformVaria
 import { transformInitializer } from "TSTransformer/nodes/transformInitializer";
 import { objectAccessor } from "TSTransformer/util/binding/objectAccessor";
 import { spreadDestructureObject } from "TSTransformer/util/spreadDestructuring";
-import { isPossiblyType, isRobloxType } from "TSTransformer/util/types";
+import { isBigIntType, isDefinitelyType, isPossiblyType, isRobloxType } from "TSTransformer/util/types";
 import { validateNotAnyType } from "TSTransformer/util/validateNotAny";
 import ts from "typescript";
 
@@ -18,11 +18,20 @@ export function transformObjectBindingPattern(
 	parentId: luau.AnyIdentifier,
 ) {
 	validateNotAnyType(state, bindingPattern);
+	const patternType = state.getType(bindingPattern);
+	if (isDefinitelyType(patternType, isBigIntType)) {
+		DiagnosticService.addDiagnostic(errors.noBigIntDestructuring(bindingPattern));
+	}
+
 	const preSpreadNames = new Array<luau.Expression>();
 	for (const element of bindingPattern.elements) {
 		const name = element.name;
 		const prop = element.propertyName;
 		const isSpread = element.dotDotDotToken !== undefined;
+
+		if (prop && ts.isPrivateIdentifier(prop)) {
+			DiagnosticService.addDiagnostic(errors.noPrivateIdentifierDestructuring(prop));
+		}
 
 		if (ts.isIdentifier(name)) {
 			const value = isSpread

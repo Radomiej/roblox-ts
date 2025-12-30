@@ -119,6 +119,9 @@ export const errors = {
 	),
 	noRegex: error("Regular expressions are not supported!"),
 	noBigInt: error("BigInt literals are not supported!"),
+	noBigIntDestructuring: error("Destructuring BigInts is not supported!"),
+	noIterableDestructuring: error("Destructuring iterables is not supported!"),
+	noPrivateIdentifierDestructuring: error("Destructuring private identifiers is not supported!"),
 
 	// banned features
 	noAny: error("Using values of type `any` is not supported!", suggestion("Use `unknown` instead.")),

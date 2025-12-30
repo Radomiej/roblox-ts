@@ -102,6 +102,10 @@ export function isNumberType(type: ts.Type) {
 	return !!(type.flags & (ts.TypeFlags.Number | ts.TypeFlags.NumberLike | ts.TypeFlags.NumberLiteral));
 }
 
+export function isBigIntType(type: ts.Type) {
+	return !!(type.flags & (ts.TypeFlags.BigInt | ts.TypeFlags.BigIntLiteral));
+}
+
 export function isNumberLiteralType(value: number): TypeCheck {
 	return type => {
 		if (type.isNumberLiteral()) {

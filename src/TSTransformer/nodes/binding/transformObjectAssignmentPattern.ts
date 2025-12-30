@@ -10,6 +10,7 @@ import { objectAccessor } from "TSTransformer/util/binding/objectAccessor";
 import { getKindName } from "TSTransformer/util/getKindName";
 import { spreadDestructureObject } from "TSTransformer/util/spreadDestructuring";
 import { skipDownwards } from "TSTransformer/util/traversal";
+import { isBigIntType, isDefinitelyType } from "TSTransformer/util/types";
 import ts from "typescript";
 
 export function transformObjectAssignmentPattern(
@@ -17,6 +18,11 @@ export function transformObjectAssignmentPattern(
 	assignmentPattern: ts.ObjectLiteralExpression,
 	parentId: luau.AnyIdentifier,
 ) {
+	const patternType = state.typeChecker.getTypeOfAssignmentPattern(assignmentPattern);
+	if (isDefinitelyType(patternType, isBigIntType)) {
+		DiagnosticService.addDiagnostic(errors.noBigIntDestructuring(assignmentPattern));
+	}
+
 	const preSpreadNames = new Array<luau.Expression>();
 	for (const property of assignmentPattern.properties) {
 		if (ts.isShorthandPropertyAssignment(property)) {
@@ -66,6 +72,9 @@ export function transformObjectAssignmentPattern(
 			);
 		} else if (ts.isPropertyAssignment(property)) {
 			const name = property.name;
+			if (ts.isPrivateIdentifier(name)) {
+				DiagnosticService.addDiagnostic(errors.noPrivateIdentifierDestructuring(name));
+			}
 			let init = property.initializer;
 			let initializer: ts.Expression | undefined;
 			if (ts.isBinaryExpression(property.initializer)) {
