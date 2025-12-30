@@ -96,25 +96,35 @@ export function setupProjectWatchProgram(data: ProjectData, usePolling: boolean)
 	const filesToClean = new Set<string>();
 	function runIncrementalCompile(additions: Set<string>, changes: Set<string>, removals: Set<string>): ts.EmitResult {
 		for (const fsPath of additions) {
-			if (fs.statSync(fsPath).isDirectory()) {
-				walkDirectorySync(fsPath, item => {
-					if (isCompilableFile(item)) {
-						fileNamesSet.add(item);
-						filesToCompile.add(item);
-					}
-				});
-			} else if (isCompilableFile(fsPath)) {
-				fileNamesSet.add(fsPath);
-				filesToCompile.add(fsPath);
-			} else {
-				// checks for copying `init.*.d.ts`
-				checkFileName(fsPath);
-				filesToCopy.add(fsPath);
+			try {
+				if (fs.statSync(fsPath).isDirectory()) {
+					walkDirectorySync(fsPath, item => {
+						if (isCompilableFile(item)) {
+							fileNamesSet.add(item);
+							filesToCompile.add(item);
+						}
+					});
+				} else if (isCompilableFile(fsPath)) {
+					fileNamesSet.add(fsPath);
+					filesToCompile.add(fsPath);
+				} else {
+					// checks for copying `init.*.d.ts`
+					checkFileName(fsPath);
+					filesToCopy.add(fsPath);
+				}
+			} catch {
+				continue;
 			}
 		}
 
 		for (const fsPath of changes) {
-			if (isCompilableFile(fsPath)) {
+			let isCompilable = false;
+			try {
+				isCompilable = isCompilableFile(fsPath);
+			} catch {
+				continue;
+			}
+			if (isCompilable) {
 				filesToCompile.add(fsPath);
 			} else {
 				// Transformers use a separate program that must be updated separately (which is done in compileFiles),

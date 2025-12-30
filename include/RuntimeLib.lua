@@ -10,6 +10,8 @@ local TS = {}
 
 TS.Promise = Promise
 
+TS.__undefined = {}
+
 local function isPlugin(context)
 	return RunService:IsStudio() and context:FindFirstAncestorWhichIsA("Plugin") ~= nil
 end

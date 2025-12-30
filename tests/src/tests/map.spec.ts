@@ -86,6 +86,21 @@ export = () => {
 		expect(hitC).to.equal(1);
 	});
 
+	it("should support setting undefined values", () => {
+		const map = new Map<string, string | undefined>();
+		map.set("a", undefined);
+		expect(map.has("a")).to.equal(true);
+		expect(map.get("a")).never.to.be.ok();
+
+		let called = 0;
+		map.forEach((value, key) => {
+			called++;
+			expect(key).to.equal("a");
+			expect(value).never.to.be.ok();
+		});
+		expect(called).to.equal(1);
+	});
+
 	it("should support constructor parameters", () => {
 		const arr: ReadonlyArray<[string, number]> = [
 			["a", 1],
