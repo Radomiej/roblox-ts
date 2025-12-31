@@ -185,7 +185,16 @@ export function isAwaitUsingDeclaration(node: ts.VariableDeclarationList) {
 	return flags === ts.NodeFlags.AwaitUsing;
 }
 
-function transformUsingDeclaration(state: TransformState, node: ts.VariableDeclarationList): luau.List<luau.Statement> {
+export interface UsingDeclarationInfo {
+	id: luau.AnyIdentifier;
+	isAwait: boolean;
+}
+
+function transformUsingDeclaration(
+	state: TransformState,
+	node: ts.VariableDeclarationList,
+	usingDeclarations: Array<UsingDeclarationInfo>,
+): luau.List<luau.Statement> {
 	const statements = luau.list.make<luau.Statement>();
 	const isAwaitUsing = isAwaitUsingDeclaration(node);
 
@@ -201,15 +210,33 @@ function transformUsingDeclaration(state: TransformState, node: ts.VariableDecla
 		return statements;
 	}
 
-	// For now, using statements are not fully supported - show diagnostic
-	// Full implementation requires block-level transformation to wrap in try-finally
-	DiagnosticService.addDiagnostic(errors.noUsingStatement(node));
-
-	// Transform as regular const declarations
+	// Transform using declarations and track them for disposal
 	for (const declaration of node.declarations) {
-		const [variableStatements, prereqs] = state.capture(() => transformVariableDeclaration(state, declaration));
-		luau.list.pushList(statements, prereqs);
-		luau.list.pushList(statements, variableStatements);
+		if (!declaration.initializer) continue;
+
+		const [initExp, initPrereqs] = state.capture(() => transformExpression(state, declaration.initializer!));
+		luau.list.pushList(statements, initPrereqs);
+
+		const name = declaration.name;
+		if (!ts.isIdentifier(name)) {
+			// Destructuring in using is not supported
+			DiagnosticService.addDiagnostic(errors.noUsingStatement(node));
+			continue;
+		}
+
+		const resourceId = transformIdentifierDefined(state, name);
+
+		// Create: local resource = initExp
+		luau.list.push(
+			statements,
+			luau.create(luau.SyntaxKind.VariableDeclaration, {
+				left: resourceId,
+				right: initExp,
+			}),
+		);
+
+		// Track this using declaration for later disposal
+		usingDeclarations.push({ id: resourceId, isAwait: isAwaitUsing });
 	}
 
 	return statements;
@@ -218,6 +245,7 @@ function transformUsingDeclaration(state: TransformState, node: ts.VariableDecla
 export function transformVariableDeclarationList(
 	state: TransformState,
 	node: ts.VariableDeclarationList,
+	usingDeclarations?: Array<UsingDeclarationInfo>,
 ): luau.List<luau.Statement> {
 	if (isVarDeclaration(node)) {
 		DiagnosticService.addDiagnostic(errors.noVar(node));
@@ -225,7 +253,22 @@ export function transformVariableDeclarationList(
 
 	// using/await using declarations need special handling
 	if (isUsingDeclaration(node) || isAwaitUsingDeclaration(node)) {
-		return transformUsingDeclaration(state, node);
+		if (usingDeclarations) {
+			return transformUsingDeclaration(state, node, usingDeclarations);
+		} else {
+			// No using declarations tracking - show diagnostic
+			DiagnosticService.addDiagnostic(errors.noUsingStatement(node));
+			// Transform as regular const
+			const statements = luau.list.make<luau.Statement>();
+			for (const declaration of node.declarations) {
+				const [variableStatements, prereqs] = state.capture(() =>
+					transformVariableDeclaration(state, declaration),
+				);
+				luau.list.pushList(statements, prereqs);
+				luau.list.pushList(statements, variableStatements);
+			}
+			return statements;
+		}
 	}
 
 	const statements = luau.list.make<luau.Statement>();
