@@ -4,7 +4,7 @@ import { transformClassLikeDeclaration } from "TSTransformer/nodes/class/transfo
 import ts from "typescript";
 
 export function transformClassExpression(state: TransformState, prereqs: Prereqs, node: ts.ClassExpression) {
-	const { statements, name } = transformClassLikeDeclaration(state, prereqs, node);
+	const { statements, name } = transformClassLikeDeclaration(state, node);
 	prereqs.prereqList(statements);
 	return name;
 }

@@ -4,6 +4,7 @@ import { assert } from "Shared/util/assert";
 import { getOrSetDefault } from "Shared/util/getOrSetDefault";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformIdentifierDefined } from "TSTransformer/nodes/expressions/transformIdentifier";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
 import { hasMultipleDefinitions } from "TSTransformer/util/hasMultipleDefinitions";
@@ -49,7 +50,7 @@ function transformNamespace(state: TransformState, name: ts.Identifier, body: ts
 
 	validateIdentifier(state, name);
 
-	const nameExp = transformIdentifierDefined(state, name);
+	const nameExp = transformIdentifierDefined(state, new Prereqs(), name);
 
 	const statements = luau.list.make<luau.Statement>();
 	const doStatements = luau.list.make<luau.Statement>();
@@ -111,7 +112,7 @@ function transformNamespace(state: TransformState, name: ts.Identifier, body: ts
 			luau.create(luau.SyntaxKind.Assignment, {
 				left: luau.property(containerId, body.name.text),
 				operator: "=",
-				right: transformIdentifierDefined(state, body.name),
+				right: transformIdentifierDefined(state, new Prereqs(), body.name),
 			}),
 		);
 	}

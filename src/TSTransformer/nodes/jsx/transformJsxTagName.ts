@@ -2,6 +2,7 @@ import luau from "@roblox-ts/luau-ast";
 import { errors } from "Shared/diagnostics";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
 import ts from "typescript";
@@ -19,11 +20,11 @@ function transformJsxTagNameExpression(state: TransformState, node: ts.JsxTagNam
 		if (ts.isPrivateIdentifier(node.name)) {
 			DiagnosticService.addDiagnostic(errors.noPrivateIdentifier(node.name));
 		}
-		return luau.property(convertToIndexableExpression(transformExpression(state, node.expression)), node.name.text);
+		return luau.property(convertToIndexableExpression(transformExpression(state, new Prereqs(), node.expression)), node.name.text);
 	} else if (ts.isJsxNamespacedName(node)) {
 		return luau.string(ts.getTextOfJsxNamespacedName(node));
 	} else {
-		return transformExpression(state, node);
+		return transformExpression(state, new Prereqs(), node);
 	}
 }
 

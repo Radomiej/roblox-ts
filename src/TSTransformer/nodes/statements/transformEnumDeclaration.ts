@@ -92,7 +92,7 @@ export function transformEnumDeclaration(state: TransformState, node: ts.EnumDec
 			} else {
 				// constantValue is always number without initializer, so assert is safe
 				assert(member.initializer);
-				valueExp = state.pushToVarIfComplex(transformExpression(state, member.initializer), "value");
+				valueExp = state.pushToVarIfComplex(transformExpression(state, new Prereqs(), member.initializer), "value");
 			}
 
 			state.prereq(

@@ -213,7 +213,6 @@ export function transformBinaryExpression(state: TransformState, prereqs: Prereq
 		if (operator !== undefined) {
 			return createAssignmentExpression(
 				state,
-				prereqs,
 				writable,
 				operator,
 				getAssignableValue(operator, value, valueType),
@@ -221,7 +220,6 @@ export function transformBinaryExpression(state: TransformState, prereqs: Prereq
 		} else {
 			return createCompoundAssignmentExpression(
 				state,
-				prereqs,
 				node,
 				writable,
 				writableType,
@@ -272,5 +270,5 @@ export function transformBinaryExpression(state: TransformState, prereqs: Prereq
 		}
 	}
 
-	return createBinaryFromOperator(state, prereqs, node, left, leftType, operatorKind, right, rightType);
+	return createBinaryFromOperator(state, node, left, leftType, operatorKind, right, rightType);
 }

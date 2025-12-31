@@ -1,6 +1,7 @@
 import luau from "@roblox-ts/luau-ast";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformVariable } from "TSTransformer/nodes/statements/transformVariableStatement";
 import { transformEntityName } from "TSTransformer/nodes/transformEntityName";
 import { createImportExpression } from "TSTransformer/util/createImportExpression";
@@ -20,7 +21,11 @@ export function transformImportEqualsDeclaration(state: TransformState, node: ts
 		if (isSymbolOfValue(ts.skipAlias(aliasSymbol, state.typeChecker))) {
 			luau.list.pushList(
 				statements,
-				state.capturePrereqs(() => transformVariable(state, node.name, importExp)),
+				state.capturePrereqs(() => {
+					const prereqs = new Prereqs();
+					transformVariable(state, prereqs, node.name, importExp);
+					return prereqs.statements;
+				}),
 			);
 		}
 
@@ -37,8 +42,10 @@ export function transformImportEqualsDeclaration(state: TransformState, node: ts
 	} else {
 		// Identifier | QualifiedName
 		// see: https://github.com/roblox-ts/roblox-ts/issues/1895
-		return state.capturePrereqs(() =>
-			transformVariable(state, node.name, transformEntityName(state, moduleReference)),
-		);
+		return state.capturePrereqs(() => {
+			const prereqs = new Prereqs();
+			transformVariable(state, prereqs, node.name, transformEntityName(state, moduleReference));
+			return prereqs.statements;
+		});
 	}
 }

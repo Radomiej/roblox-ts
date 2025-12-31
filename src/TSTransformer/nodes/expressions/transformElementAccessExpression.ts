@@ -75,5 +75,5 @@ export function transformElementAccessExpression(state: TransformState, prereqs:
 		return constantValue;
 	}
 
-	return transformOptionalChain(state, node);
+	return transformOptionalChain(state, prereqs, node);
 }

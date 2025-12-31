@@ -68,7 +68,10 @@ function transformMemberDecorators(
 
 	for (let i = 0; i < decorators.length; i++) {
 		const decorator = decorators[i];
-		let [expression, prereqs] = state.capture(() => transformExpression(state, decorator.expression));
+		let [expression, prereqs] = state.capture(() => {
+			const innerPrereqs = new Prereqs();
+			return transformExpression(state, innerPrereqs, decorator.expression);
+		});
 
 		luau.list.pushList(initializers, prereqs);
 

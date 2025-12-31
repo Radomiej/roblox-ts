@@ -3,6 +3,7 @@ import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformIdentifierDefined } from "TSTransformer/nodes/expressions/transformIdentifier";
 import { transformParameters } from "TSTransformer/nodes/transformParameters";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
@@ -23,7 +24,7 @@ export function transformFunctionDeclaration(state: TransformState, node: ts.Fun
 		validateIdentifier(state, node.name);
 	}
 
-	const name = node.name ? transformIdentifierDefined(state, node.name) : luau.id("default");
+	const name = node.name ? transformIdentifierDefined(state, new Prereqs(), node.name) : luau.id("default");
 
 	let { statements, parameters, hasDotDotDot } = transformParameters(state, node);
 	luau.list.pushList(statements, transformStatementList(state, node.body, node.body.statements));

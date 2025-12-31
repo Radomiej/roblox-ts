@@ -15,7 +15,7 @@ function transformUnaryExpressionStatement(
 	state: TransformState,
 	node: ts.PrefixUnaryExpression | ts.PostfixUnaryExpression,
 ) {
-	const writable = transformWritableExpression(state, node.operand, false);
+	const writable = transformWritableExpression(state, new Prereqs(), node.operand, false);
 	const operator: luau.AssignmentOperator = node.operator === ts.SyntaxKind.PlusPlusToken ? "+=" : "-=";
 	return luau.create(luau.SyntaxKind.Assignment, {
 		left: writable,
@@ -44,13 +44,16 @@ export function transformExpressionStatementInner(
 				operatorKind as ts.AssignmentOperator,
 				valueType,
 			);
+			const prereqs = new Prereqs();
 			const { writable, readable, value } = transformWritableAssignment(
 				state,
+				prereqs,
 				expression.left,
 				expression.right,
 				operator === undefined,
 				operator === undefined,
 			);
+			state.prereqList(prereqs.statements);
 			if (operator !== undefined) {
 				return luau.list.make(
 					luau.create(luau.SyntaxKind.Assignment, {

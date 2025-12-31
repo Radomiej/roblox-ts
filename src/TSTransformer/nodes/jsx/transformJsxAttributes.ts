@@ -2,6 +2,7 @@ import luau from "@roblox-ts/luau-ast";
 import { errors } from "Shared/diagnostics";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { createTruthinessChecks } from "TSTransformer/util/createTruthinessChecks";
 import { assignToMapPointer, disableMapInline, MapPointer } from "TSTransformer/util/pointer";
@@ -38,7 +39,7 @@ function createJsxAttributeLoop(
 
 	if (!definitelyObject) {
 		statement = luau.create(luau.SyntaxKind.IfStatement, {
-			condition: createTruthinessChecks(state, expression, tsExpression),
+			condition: createTruthinessChecks(state, new Prereqs(), expression, tsExpression),
 			statements: luau.list.make(statement),
 			elseBody: luau.list.make(),
 		});
@@ -54,7 +55,7 @@ function transformJsxAttribute(state: TransformState, attribute: ts.JsxAttribute
 	}
 
 	const [init, initPrereqs] = initializer
-		? state.capture(() => transformExpression(state, initializer!))
+		? state.capture(() => transformExpression(state, new Prereqs(), initializer!))
 		: [luau.bool(true), luau.list.make<luau.Statement>()];
 
 	if (!luau.list.isEmpty(initPrereqs)) {
@@ -80,7 +81,7 @@ export function transformJsxAttributes(state: TransformState, attributes: ts.Jsx
 				DiagnosticService.addDiagnostic(errors.noMacroObjectSpread(attribute));
 			}
 
-			const expression = transformExpression(state, attribute.expression);
+			const expression = transformExpression(state, new Prereqs(), attribute.expression);
 
 			if (attribute === attributes.properties[0] && isDefinitelyType(expType, isObjectType)) {
 				attributesPtr.value = state.pushToVar(

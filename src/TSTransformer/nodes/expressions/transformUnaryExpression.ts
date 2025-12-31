@@ -18,7 +18,7 @@ export function transformPostfixUnaryExpression(
 ) {
 	validateNotAnyType(state, node.operand);
 
-	const writable = transformWritableExpression(state, node.operand, true);
+	const writable = transformWritableExpression(state, prereqs, node.operand, true);
 	const origValue = prereqs.pushToVar(writable, "original");
 
 	prereqs.prereq(
@@ -45,7 +45,7 @@ export function transformPrefixUnaryExpression(
 	validateNotAnyType(state, node.operand);
 
 	if (node.operator === ts.SyntaxKind.PlusPlusToken || node.operator === ts.SyntaxKind.MinusMinusToken) {
-		const writable = transformWritableExpression(state, node.operand, true);
+		const writable = transformWritableExpression(state, prereqs, node.operand, true);
 		const operator: luau.AssignmentOperator = node.operator === ts.SyntaxKind.PlusPlusToken ? "+=" : "-=";
 		prereqs.prereq(
 			luau.create(luau.SyntaxKind.Assignment, {

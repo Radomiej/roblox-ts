@@ -2,6 +2,7 @@ import luau from "@roblox-ts/luau-ast";
 import { errors } from "Shared/diagnostics";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { isSymbolMutable } from "TSTransformer/util/isSymbolMutable";
 import { isSymbolOfValue } from "TSTransformer/util/isSymbolOfValue";
@@ -14,13 +15,13 @@ function transformExportEquals(state: TransformState, node: ts.ExportAssignment)
 	const finalStatement = sourceFile.statements[sourceFile.statements.length - 1];
 	if (finalStatement === node) {
 		return luau.list.make<luau.Statement>(
-			luau.create(luau.SyntaxKind.ReturnStatement, { expression: transformExpression(state, node.expression) }),
+			luau.create(luau.SyntaxKind.ReturnStatement, { expression: transformExpression(state, new Prereqs(), node.expression) }),
 		);
 	} else {
 		return luau.list.make<luau.Statement>(
 			luau.create(luau.SyntaxKind.VariableDeclaration, {
 				left: state.getModuleIdFromNode(node),
-				right: transformExpression(state, node.expression),
+				right: transformExpression(state, new Prereqs(), node.expression),
 			}),
 		);
 	}
@@ -29,7 +30,10 @@ function transformExportEquals(state: TransformState, node: ts.ExportAssignment)
 function transformExportDefault(state: TransformState, node: ts.ExportAssignment) {
 	const statements = luau.list.make<luau.Statement>();
 
-	const [expression, prereqs] = state.capture(() => transformExpression(state, node.expression));
+	const [expression, prereqs] = state.capture(() => {
+		const innerPrereqs = new Prereqs();
+		return transformExpression(state, innerPrereqs, node.expression);
+	});
 	luau.list.pushList(statements, prereqs);
 	luau.list.push(
 		statements,
