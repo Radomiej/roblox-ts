@@ -1,5 +1,6 @@
 import luau from "@roblox-ts/luau-ast";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
 import { createTruthinessChecks } from "TSTransformer/util/createTruthinessChecks";
@@ -15,9 +16,11 @@ export function transformDoStatement(state: TransformState, { expression, statem
 		conditionIsInvertedInLuau = false;
 	}
 
-	const [condition, conditionPrereqs] = state.capture(() =>
-		createTruthinessChecks(state, transformExpression(state, expression), expression),
-	);
+	const [condition, conditionPrereqs] = state.capture(() => {
+		const prereqs = new Prereqs();
+		const exp = transformExpression(state, prereqs, expression);
+		return createTruthinessChecks(state, prereqs, exp, expression);
+	});
 
 	const repeatStatements = luau.list.make<luau.Statement>();
 	luau.list.push(

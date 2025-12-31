@@ -1,5 +1,6 @@
 import luau from "@roblox-ts/luau-ast";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
 import { createTruthinessChecks } from "TSTransformer/util/createTruthinessChecks";
@@ -7,7 +8,12 @@ import { getStatements } from "TSTransformer/util/getStatements";
 import ts from "typescript";
 
 export function transformIfStatementInner(state: TransformState, node: ts.IfStatement): luau.IfStatement {
-	const condition = createTruthinessChecks(state, transformExpression(state, node.expression), node.expression);
+	const prereqs = new Prereqs();
+	const conditionExpression = transformExpression(state, prereqs, node.expression);
+	const condition = createTruthinessChecks(state, prereqs, conditionExpression, node.expression);
+
+	// Add condition prerequisites to the current statement list
+	state.prereqList(prereqs.statements);
 
 	const statements = transformStatementList(state, node.thenStatement, getStatements(node.thenStatement));
 

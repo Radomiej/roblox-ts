@@ -2,6 +2,7 @@ import luau from "@roblox-ts/luau-ast";
 import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
 import { transformArrayAssignmentPattern } from "TSTransformer/nodes/binding/transformArrayAssignmentPattern";
 import { transformObjectAssignmentPattern } from "TSTransformer/nodes/binding/transformObjectAssignmentPattern";
@@ -37,6 +38,7 @@ import ts from "typescript";
 
 function transformOptimizedArrayAssignmentPattern(
 	state: TransformState,
+	prereqs: Prereqs,
 	assignmentPattern: ts.ArrayLiteralExpression,
 	rhs: luau.Expression | luau.List<luau.Expression>,
 ) {
@@ -80,9 +82,9 @@ function transformOptimizedArrayAssignmentPattern(
 					luau.list.push(variables, id);
 					luau.list.push(writes, id);
 					if (initializer) {
-						state.prereq(transformInitializer(state, id, initializer));
+						prereqs.prereq(transformInitializer(state, id, initializer));
 					}
-					transformObjectAssignmentPattern(state, element, id);
+					transformObjectAssignmentPattern(state, prereqs, element, id);
 				} else {
 					assert(
 						false,
@@ -93,26 +95,26 @@ function transformOptimizedArrayAssignmentPattern(
 		}
 	});
 	if (!luau.list.isEmpty(variables)) {
-		state.prereq(
+		prereqs.prereq(
 			luau.create(luau.SyntaxKind.VariableDeclaration, {
 				left: variables,
 				right: undefined,
 			}),
 		);
 	}
-	state.prereqList(writesPrereqs);
+	prereqs.prereqList(writesPrereqs);
 	assert(!luau.list.isEmpty(writes));
-	state.prereq(
+	prereqs.prereq(
 		luau.create(luau.SyntaxKind.Assignment, {
 			left: writes,
 			operator: "=",
 			right: rhs,
 		}),
 	);
-	state.prereqList(statements);
+	prereqs.prereqList(statements);
 }
 
-export function transformBinaryExpression(state: TransformState, node: ts.BinaryExpression) {
+export function transformBinaryExpression(state: TransformState, prereqs: Prereqs, node: ts.BinaryExpression) {
 	const operatorKind = node.operatorToken.kind;
 
 	validateNotAnyType(state, node.left);
@@ -133,17 +135,17 @@ export function transformBinaryExpression(state: TransformState, node: ts.Binary
 		operatorKind === ts.SyntaxKind.BarBarToken ||
 		operatorKind === ts.SyntaxKind.QuestionQuestionToken
 	) {
-		return transformLogical(state, node);
+		return transformLogical(state, prereqs, node);
 	}
 
 	if (ts.isLogicalOrCoalescingAssignmentExpression(node)) {
-		return transformLogicalOrCoalescingAssignmentExpression(state, node);
+		return transformLogicalOrCoalescingAssignmentExpression(state, prereqs, node);
 	}
 
 	if (ts.isAssignmentOperator(operatorKind)) {
 		// in destructuring, rhs must be executed first
 		if (ts.isArrayLiteralExpression(node.left)) {
-			const rightExp = transformExpression(state, node.right);
+			const rightExp = transformExpression(state, prereqs, node.right);
 
 			// optimize empty array destructure
 			if (node.left.elements.length === 0) {
@@ -158,7 +160,7 @@ export function transformBinaryExpression(state: TransformState, node: ts.Binary
 				isLuaTupleType(state)(state.getType(node.right)) &&
 				!arrayLikeExpressionContainsSpread(node.left)
 			) {
-				transformOptimizedArrayAssignmentPattern(state, node.left, rightExp);
+				transformOptimizedArrayAssignmentPattern(state, prereqs, node.left, rightExp);
 				if (!isUsedAsStatement(node)) {
 					DiagnosticService.addDiagnostic(errors.noLuaTupleDestructureAssignmentExpression(node));
 				}
@@ -171,15 +173,15 @@ export function transformBinaryExpression(state: TransformState, node: ts.Binary
 				isUsedAsStatement(node) &&
 				!arrayLikeExpressionContainsSpread(node.left)
 			) {
-				transformOptimizedArrayAssignmentPattern(state, node.left, rightExp.members);
+				transformOptimizedArrayAssignmentPattern(state, prereqs, node.left, rightExp.members);
 				return luau.none();
 			}
 
-			const parentId = state.pushToVar(rightExp, "binding");
-			transformArrayAssignmentPattern(state, node.left, parentId);
+			const parentId = prereqs.pushToVar(rightExp, "binding");
+			transformArrayAssignmentPattern(state, prereqs, node.left, parentId);
 			return parentId;
 		} else if (ts.isObjectLiteralExpression(node.left)) {
-			const rightExp = transformExpression(state, node.right);
+			const rightExp = transformExpression(state, prereqs, node.right);
 
 			// optimize empty object destructure
 			if (node.left.properties.length === 0) {
@@ -189,8 +191,8 @@ export function transformBinaryExpression(state: TransformState, node: ts.Binary
 				return rightExp;
 			}
 
-			const parentId = state.pushToVar(rightExp, "binding");
-			transformObjectAssignmentPattern(state, node.left, parentId);
+			const parentId = prereqs.pushToVar(rightExp, "binding");
+			transformObjectAssignmentPattern(state, prereqs, node.left, parentId);
 			return parentId;
 		}
 
@@ -199,6 +201,7 @@ export function transformBinaryExpression(state: TransformState, node: ts.Binary
 		const operator = getSimpleAssignmentOperator(writableType, operatorKind as ts.AssignmentOperator, valueType);
 		const { writable, readable, value } = transformWritableAssignment(
 			state,
+			prereqs,
 			node.left,
 			node.right,
 			true,
@@ -207,6 +210,7 @@ export function transformBinaryExpression(state: TransformState, node: ts.Binary
 		if (operator !== undefined) {
 			return createAssignmentExpression(
 				state,
+				prereqs,
 				writable,
 				operator,
 				getAssignableValue(operator, value, valueType),
@@ -214,6 +218,7 @@ export function transformBinaryExpression(state: TransformState, node: ts.Binary
 		} else {
 			return createCompoundAssignmentExpression(
 				state,
+				prereqs,
 				node,
 				writable,
 				writableType,
@@ -226,10 +231,10 @@ export function transformBinaryExpression(state: TransformState, node: ts.Binary
 	}
 
 	if (isBitwiseOperator(operatorKind)) {
-		return createBitwiseFromOperator(state, operatorKind, node);
+		return createBitwiseFromOperator(state, prereqs, operatorKind, node);
 	}
 
-	const [left, right] = ensureTransformOrder(state, [node.left, node.right]);
+	const [left, right] = ensureTransformOrder(state, prereqs, [node.left, node.right]);
 
 	if (operatorKind === ts.SyntaxKind.InKeyword) {
 		return luau.binary(
@@ -264,5 +269,5 @@ export function transformBinaryExpression(state: TransformState, node: ts.Binary
 		}
 	}
 
-	return createBinaryFromOperator(state, node, left, leftType, operatorKind, right, rightType);
+	return createBinaryFromOperator(state, prereqs, node, left, leftType, operatorKind, right, rightType);
 }

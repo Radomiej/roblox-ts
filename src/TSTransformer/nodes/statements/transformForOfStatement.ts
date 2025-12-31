@@ -3,6 +3,7 @@ import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
 import { SYMBOL_NAMES, TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformArrayAssignmentPattern } from "TSTransformer/nodes/binding/transformArrayAssignmentPattern";
 import { transformBindingName } from "TSTransformer/nodes/binding/transformBindingName";
 import { transformObjectAssignmentPattern } from "TSTransformer/nodes/binding/transformObjectAssignmentPattern";
@@ -49,7 +50,7 @@ function makeForLoopBuilder(
 		initializers: luau.List<luau.Statement>,
 	) => luau.Expression,
 ): LoopBuilder {
-	return (state, statements, name, exp, source) => {
+	return (state, statements, name, exp, _source) => {
 		const ids = luau.list.make<luau.AnyIdentifier>();
 		const initializers = luau.list.make<luau.Statement>();
 		const expression = callback(state, name, exp, ids, initializers);
@@ -409,6 +410,7 @@ const buildGeneratorLoop: LoopBuilder = makeForLoopBuilder((state, initializer, 
 	return luau.property(convertToIndexableExpression(exp), "next");
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const buildIterableLoop: LoopBuilder = (state, statements, initializer, exp, source) => {
 	const iteratorId = state.pushToVar(
 		luau.call(
@@ -469,6 +471,7 @@ const buildIterableLoop: LoopBuilder = (state, statements, initializer, exp, sou
 };
 
 const buildDefaultLoop: LoopBuilder = (state, statements, initializer, exp, source) => {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const initializers = luau.list.make<luau.Statement>();
 	const id = transformForInitializer(state, initializer, initializers);
 	luau.list.pushList(statements, initializers);
@@ -525,7 +528,9 @@ export function transformForOfRangeMacro(
 	const statements = luau.list.make<luau.Statement>();
 	const id = transformForInitializer(state, node.initializer, statements);
 
-	const [[start, end, step], prereqs] = state.capture(() => ensureTransformOrder(state, macroCall.arguments));
+	const [[start, end, step], prereqs] = state.capture(() =>
+		ensureTransformOrder(state, new Prereqs(), macroCall.arguments),
+	);
 	luau.list.pushList(result, prereqs);
 
 	luau.list.pushList(statements, transformStatementList(state, node.statement, getStatements(node.statement)));
@@ -563,7 +568,7 @@ export function transformForOfStatement(state: TransformState, node: ts.ForOfSta
 
 	const result = luau.list.make<luau.Statement>();
 
-	const [exp, expPrereqs] = state.capture(() => transformExpression(state, node.expression));
+	const [exp, expPrereqs] = state.capture(() => transformExpression(state, new Prereqs(), node.expression));
 	luau.list.pushList(result, expPrereqs);
 
 	const expType = state.getType(node.expression);

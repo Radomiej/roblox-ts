@@ -1,5 +1,6 @@
 import luau from "@roblox-ts/luau-ast";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { transformLogicalOrCoalescingAssignmentExpressionStatement } from "TSTransformer/nodes/transformLogicalOrCoalescingAssignmentExpression";
 import { transformWritableAssignment, transformWritableExpression } from "TSTransformer/nodes/transformWritable";
@@ -80,7 +81,10 @@ export function transformExpressionStatementInner(
 		return luau.list.make(transformUnaryExpressionStatement(state, expression));
 	}
 
-	return wrapExpressionStatement(transformExpression(state, expression));
+	const prereqs = new Prereqs();
+	const exp = transformExpression(state, prereqs, expression);
+	state.prereqList(prereqs.statements);
+	return wrapExpressionStatement(exp);
 }
 
 export function transformExpressionStatement(state: TransformState, node: ts.ExpressionStatement) {

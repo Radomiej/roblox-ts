@@ -1,68 +1,57 @@
 import luau from "@roblox-ts/luau-ast";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { createTruthinessChecks } from "TSTransformer/util/createTruthinessChecks";
 import { isUsedAsStatement } from "TSTransformer/util/isUsedAsStatement";
 import { wrapExpressionStatement } from "TSTransformer/util/wrapExpressionStatement";
 import ts from "typescript";
 
-export function transformConditionalExpression(state: TransformState, node: ts.ConditionalExpression) {
-	const condition = transformExpression(state, node.condition);
-	const [whenTrue, whenTruePrereqs] = state.capture(() => transformExpression(state, node.whenTrue));
-	const [whenFalse, whenFalsePrereqs] = state.capture(() => transformExpression(state, node.whenFalse));
+export function transformConditionalExpression(state: TransformState, prereqs: Prereqs, node: ts.ConditionalExpression) {
+	const condition = transformExpression(state, prereqs, node.condition);
+	const whenTrue = transformExpression(state, prereqs, node.whenTrue);
+	const whenFalse = transformExpression(state, prereqs, node.whenFalse);
 
 	if (isUsedAsStatement(node)) {
-		luau.list.pushList(whenTruePrereqs, wrapExpressionStatement(whenTrue));
-		luau.list.pushList(whenFalsePrereqs, wrapExpressionStatement(whenFalse));
-		state.prereq(
+		const whenTrueStatements = wrapExpressionStatement(whenTrue);
+		const whenFalseStatements = wrapExpressionStatement(whenFalse);
+		prereqs.prereq(
 			luau.create(luau.SyntaxKind.IfStatement, {
-				condition: createTruthinessChecks(state, condition, node.condition),
-				statements: whenTruePrereqs,
-				elseBody: whenFalsePrereqs,
+				condition: createTruthinessChecks(state, prereqs, condition, node.condition),
+				statements: whenTrueStatements,
+				elseBody: whenFalseStatements,
 			}),
 		);
 		return luau.none();
 	}
 
-	if (luau.list.isEmpty(whenTruePrereqs) && luau.list.isEmpty(whenFalsePrereqs)) {
+	if (luau.list.isEmpty(prereqs.statements)) {
 		return luau.create(luau.SyntaxKind.IfExpression, {
-			condition: createTruthinessChecks(state, condition, node.condition),
+			condition: createTruthinessChecks(state, prereqs, condition, node.condition),
 			expression: whenTrue,
 			alternative: whenFalse,
 		});
 	}
 
-	const tempId = luau.tempId("result");
-	state.prereq(
-		luau.create(luau.SyntaxKind.VariableDeclaration, {
-			left: tempId,
-			right: undefined,
-		}),
-	);
+	const tempId = prereqs.pushToVar(undefined, "result");
 
-	luau.list.push(
-		whenTruePrereqs,
-		luau.create(luau.SyntaxKind.Assignment, {
-			left: tempId,
-			operator: "=",
-			right: whenTrue,
-		}),
-	);
-
-	luau.list.push(
-		whenFalsePrereqs,
-		luau.create(luau.SyntaxKind.Assignment, {
-			left: tempId,
-			operator: "=",
-			right: whenFalse,
-		}),
-	);
-
-	state.prereq(
+	prereqs.prereq(
 		luau.create(luau.SyntaxKind.IfStatement, {
-			condition: createTruthinessChecks(state, condition, node.condition),
-			statements: whenTruePrereqs,
-			elseBody: whenFalsePrereqs,
+			condition: createTruthinessChecks(state, prereqs, condition, node.condition),
+			statements: luau.list.make(
+				luau.create(luau.SyntaxKind.Assignment, {
+					left: tempId,
+					operator: "=",
+					right: whenTrue,
+				}),
+			),
+			elseBody: luau.list.make(
+				luau.create(luau.SyntaxKind.Assignment, {
+					left: tempId,
+					operator: "=",
+					right: whenFalse,
+				}),
+			),
 		}),
 	);
 

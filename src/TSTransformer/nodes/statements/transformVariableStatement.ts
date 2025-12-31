@@ -3,6 +3,7 @@ import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformArrayBindingPattern } from "TSTransformer/nodes/binding/transformArrayBindingPattern";
 import { transformObjectBindingPattern } from "TSTransformer/nodes/binding/transformObjectBindingPattern";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
@@ -41,7 +42,7 @@ export function transformVariable(state: TransformState, identifier: ts.Identifi
 		}
 	}
 
-	const left: luau.AnyIdentifier = transformIdentifierDefined(state, identifier);
+	const left: luau.AnyIdentifier = transformIdentifierDefined(state, new Prereqs(), identifier);
 
 	checkVariableHoist(state, identifier, symbol);
 	if (state.isHoisted.get(symbol) === true) {
@@ -70,16 +71,20 @@ function transformOptimizedArrayBindingPattern(
 				} else {
 					if (ts.isIdentifier(element.name)) {
 						validateIdentifier(state, element.name);
-						const id = transformIdentifierDefined(state, element.name);
+						const id = transformIdentifierDefined(state, new Prereqs(), element.name);
 						luau.list.push(ids, id);
 						if (element.initializer) {
-							state.prereq(transformInitializer(state, id, element.initializer));
+							const prereqs = new Prereqs();
+							const initStatement = transformInitializer(state, prereqs, id, element.initializer);
+							state.prereq(initStatement);
 						}
 					} else {
 						const id = luau.tempId("binding");
 						luau.list.push(ids, id);
 						if (element.initializer) {
-							state.prereq(transformInitializer(state, id, element.initializer));
+							const prereqs = new Prereqs();
+							const initStatement = transformInitializer(state, prereqs, id, element.initializer);
+							state.prereq(initStatement);
 						}
 						if (ts.isArrayBindingPattern(element.name)) {
 							transformArrayBindingPattern(state, element.name, id);
@@ -107,7 +112,11 @@ export function transformVariableDeclaration(
 		luau.list.pushList(
 			statements,
 			// non-null assertion on node.initializer because inside callback
-			state.capturePrereqs(() => (value = transformExpression(state, node.initializer!))),
+			state.capturePrereqs(() => {
+				const prereqs = new Prereqs();
+				value = transformExpression(state, prereqs, node.initializer!);
+				return prereqs.statements;
+			}),
 		);
 	}
 
@@ -214,7 +223,9 @@ function transformUsingDeclaration(
 	for (const declaration of node.declarations) {
 		if (!declaration.initializer) continue;
 
-		const [initExp, initPrereqs] = state.capture(() => transformExpression(state, declaration.initializer!));
+		const [initExp, initPrereqs] = state.capture(() =>
+			transformExpression(state, new Prereqs(), declaration.initializer!),
+		);
 		luau.list.pushList(statements, initPrereqs);
 
 		const name = declaration.name;
@@ -224,7 +235,7 @@ function transformUsingDeclaration(
 			continue;
 		}
 
-		const resourceId = transformIdentifierDefined(state, name);
+		const resourceId = transformIdentifierDefined(state, new Prereqs(), name);
 
 		// Create: local resource = initExp
 		luau.list.push(

@@ -3,6 +3,7 @@ import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { transformIdentifierDefined } from "TSTransformer/nodes/expressions/transformIdentifier";
 import { transformExpressionStatementInner } from "TSTransformer/nodes/statements/transformExpressionStatement";
@@ -179,7 +180,7 @@ function transformForStatementFallback(state: TransformState, node: ts.ForStatem
 						);
 					}
 					state.symbolToIdMap.delete(symbol);
-					const realId = transformIdentifierDefined(state, id);
+					const realId = transformIdentifierDefined(state, new Prereqs(), id);
 
 					// local i = _i
 					luau.list.push(
@@ -248,7 +249,9 @@ function transformForStatementFallback(state: TransformState, node: ts.ForStatem
 
 	let [conditionExp, conditionPrereqs] = state.capture(() => {
 		if (condition) {
-			return createTruthinessChecks(state, transformExpression(state, condition), condition);
+			const prereqs = new Prereqs();
+			const exp = transformExpression(state, prereqs, condition);
+			return createTruthinessChecks(state, prereqs, exp, condition);
 		} else {
 			return luau.bool(true);
 		}
@@ -466,12 +469,12 @@ function transformForStatementOptimized(state: TransformState, node: ts.ForState
 
 	const result = luau.list.make<luau.Statement>();
 
-	const id = transformIdentifierDefined(state, decName);
+	const id = transformIdentifierDefined(state, new Prereqs(), decName);
 
-	const [start, startPrereqs] = state.capture(() => transformExpression(state, decInit));
+	const [start, startPrereqs] = state.capture(() => transformExpression(state, new Prereqs(), decInit));
 	luau.list.pushList(result, startPrereqs);
 
-	let [end, endPrereqs] = state.capture(() => transformExpression(state, condition.right));
+	let [end, endPrereqs] = state.capture(() => transformExpression(state, new Prereqs(), condition.right));
 	luau.list.pushList(result, endPrereqs);
 
 	const step = luau.number(stepValue);

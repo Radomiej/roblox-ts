@@ -4,6 +4,7 @@ import { assert } from "Shared/util/assert";
 import { getOrSetDefault } from "Shared/util/getOrSetDefault";
 import { SYMBOL_NAMES, TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { isBlockLike, isNamespace } from "TSTransformer/typeGuards";
 import { getExtendsNode } from "TSTransformer/util/getExtendsNode";
 import { isSymbolMutable } from "TSTransformer/util/isSymbolMutable";
@@ -11,7 +12,7 @@ import { getAncestor, isAncestorOf, skipDownwards, skipUpwards } from "TSTransfo
 import { getFirstConstructSymbol } from "TSTransformer/util/types";
 import ts from "typescript";
 
-export function transformIdentifierDefined(state: TransformState, node: ts.Identifier) {
+export function transformIdentifierDefined(state: TransformState, prereqs: Prereqs, node: ts.Identifier) {
 	const symbol = ts.isShorthandPropertyAssignment(node.parent)
 		? state.typeChecker.getShorthandAssignmentValueSymbol(node.parent)
 		: state.typeChecker.getSymbolAtLocation(node);
@@ -108,7 +109,7 @@ function checkIdentifierHoist(state: TransformState, node: ts.Identifier, symbol
 	return;
 }
 
-export function transformIdentifier(state: TransformState, node: ts.Identifier) {
+export function transformIdentifier(state: TransformState, prereqs: Prereqs, node: ts.Identifier) {
 	// synthetic nodes don't have parents or symbols, so skip all the symbol-related logic
 	// JSX EntityName functions like `getJsxFactoryEntity()` will return synthetic nodes
 	// and transformEntityName will eventually end up here
@@ -172,5 +173,5 @@ export function transformIdentifier(state: TransformState, node: ts.Identifier) 
 
 	checkIdentifierHoist(state, node, symbol);
 
-	return transformIdentifierDefined(state, node);
+	return transformIdentifierDefined(state, prereqs, node);
 }

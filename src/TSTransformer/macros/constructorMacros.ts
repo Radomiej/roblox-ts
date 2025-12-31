@@ -1,21 +1,32 @@
 import luau from "@roblox-ts/luau-ast";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { ConstructorMacro, MacroList } from "TSTransformer/macros/types";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { ensureTransformOrder } from "TSTransformer/util/ensureTransformOrder";
 import ts from "typescript";
 
-function wrapWeak(state: TransformState, node: ts.NewExpression, macro: ConstructorMacro) {
+function wrapWeak(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.NewExpression,
+	macro: ConstructorMacro,
+) {
 	return luau.call(luau.globals.setmetatable, [
-		macro(state, node),
+		macro(state, prereqs, node),
 		luau.map([[luau.strings.__mode, luau.strings.k]]),
 	]);
 }
 
-function wrapUndefinedMapValue(state: TransformState, node: ts.Node, value: luau.Expression) {
+function wrapUndefinedMapValue(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.Node,
+	value: luau.Expression,
+) {
 	if (!luau.isSimple(value)) {
-		value = state.pushToVar(value, "value");
+		value = prereqs.pushToVar(value, "value");
 	}
 	return luau.create(luau.SyntaxKind.IfExpression, {
 		condition: luau.binary(value, "==", luau.nil()),
@@ -24,29 +35,29 @@ function wrapUndefinedMapValue(state: TransformState, node: ts.Node, value: luau
 	});
 }
 
-const ArrayConstructor: ConstructorMacro = (state, node) => {
+const ArrayConstructor: ConstructorMacro = (state, prereqs, node) => {
 	if (node.arguments && node.arguments.length > 0) {
-		const args = ensureTransformOrder(state, node.arguments);
+		const args = ensureTransformOrder(state, prereqs, node.arguments);
 		return luau.call(luau.globals.table.create, args);
 	}
 	return luau.array();
 };
 
-const SetConstructor: ConstructorMacro = (state, node) => {
+const SetConstructor: ConstructorMacro = (state, prereqs, node) => {
 	if (!node.arguments || node.arguments.length === 0) {
 		return luau.set();
 	}
 	const arg = node.arguments[0];
 	// spreads cause prereq array, which cannot be optimised like this
 	if (ts.isArrayLiteralExpression(arg) && !arg.elements.some(ts.isSpreadElement)) {
-		return luau.set(ensureTransformOrder(state, arg.elements));
+		return luau.set(ensureTransformOrder(state, prereqs, arg.elements));
 	} else {
-		const id = state.pushToVar(luau.set(), "set");
+		const id = prereqs.pushToVar(luau.set(), "set");
 		const valueId = luau.tempId("v");
-		state.prereq(
+		prereqs.prereq(
 			luau.create(luau.SyntaxKind.ForStatement, {
 				ids: luau.list.make<luau.AnyIdentifier>(luau.tempId(), valueId),
-				expression: transformExpression(state, arg),
+				expression: transformExpression(state, prereqs, arg),
 				statements: luau.list.make(
 					luau.create(luau.SyntaxKind.Assignment, {
 						left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
@@ -63,25 +74,25 @@ const SetConstructor: ConstructorMacro = (state, node) => {
 	}
 };
 
-const MapConstructor: ConstructorMacro = (state, node) => {
+const MapConstructor: ConstructorMacro = (state, prereqs, node) => {
 	if (!node.arguments || node.arguments.length === 0) {
 		return luau.map();
 	}
 	const arg = node.arguments[0];
-	const transformed = transformExpression(state, arg);
+	const transformed = transformExpression(state, prereqs, arg);
 	if (luau.isArray(transformed) && luau.list.every(transformed.members, member => luau.isArray(member))) {
 		const elements = luau.list.toArray(transformed.members).map(e => {
 			// non-null and type assertion because array will always have 2 members,
 			// due to map constructor typing
 			assert(luau.isArray(e) && luau.list.isNonEmpty(e.members));
-			return [e.members.head.value, wrapUndefinedMapValue(state, node, e.members.head.next!.value)] as [
+			return [e.members.head.value, wrapUndefinedMapValue(state, prereqs, node, e.members.head.next!.value)] as [
 				luau.Expression,
 				luau.Expression,
 			];
 		});
 		return luau.map(elements);
 	} else {
-		const id = state.pushToVar(luau.map(), "map");
+		const id = prereqs.pushToVar(luau.map(), "map");
 		const valueId = luau.tempId("v");
 		const elementValueId = luau.tempId("value");
 		const loopStatements = luau.list.make<luau.Statement>();
@@ -113,7 +124,7 @@ const MapConstructor: ConstructorMacro = (state, node) => {
 				}),
 			}),
 		);
-		state.prereq(
+		prereqs.prereq(
 			luau.create(luau.SyntaxKind.ForStatement, {
 				ids: luau.list.make<luau.AnyIdentifier>(luau.tempId(), valueId),
 				expression: transformed,
@@ -128,8 +139,8 @@ export const CONSTRUCTOR_MACROS: MacroList<ConstructorMacro> = {
 	ArrayConstructor,
 	SetConstructor,
 	MapConstructor,
-	WeakSetConstructor: (state, node) => wrapWeak(state, node, SetConstructor),
-	WeakMapConstructor: (state, node) => wrapWeak(state, node, MapConstructor),
+	WeakSetConstructor: (state, prereqs, node) => wrapWeak(state, prereqs, node, SetConstructor),
+	WeakMapConstructor: (state, prereqs, node) => wrapWeak(state, prereqs, node, MapConstructor),
 	ReadonlyMapConstructor: MapConstructor,
 	ReadonlySetConstructor: SetConstructor,
 };

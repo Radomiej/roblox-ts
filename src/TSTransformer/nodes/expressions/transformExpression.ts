@@ -3,6 +3,7 @@ import { DiagnosticFactory, errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformArrayLiteralExpression } from "TSTransformer/nodes/expressions/transformArrayLiteralExpression";
 import { transformAwaitExpression } from "TSTransformer/nodes/expressions/transformAwaitExpression";
 import { transformBinaryExpression } from "TSTransformer/nodes/expressions/transformBinaryExpression";
@@ -43,7 +44,7 @@ import ts from "typescript";
 
 const NO_EMIT = () => luau.none();
 
-const DIAGNOSTIC = (factory: DiagnosticFactory) => (state: TransformState, node: ts.Expression) => {
+const DIAGNOSTIC = (factory: DiagnosticFactory) => (state: TransformState, prereqs: Prereqs, node: ts.Expression) => {
 	DiagnosticService.addDiagnostic(factory(node));
 	return NO_EMIT();
 };
@@ -51,8 +52,8 @@ const DIAGNOSTIC = (factory: DiagnosticFactory) => (state: TransformState, node:
 type Validate<T> = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- typecheck only works with `any`
 	[k in keyof T]: T[k] extends [infer Kind, infer C extends (...args: any) => unknown]
-		? "kind" extends keyof Parameters<C>[1]
-			? Kind extends Parameters<C>[1]["kind"]
+		? "kind" extends keyof Parameters<C>[2]
+			? Kind extends Parameters<C>[2]["kind"]
 				? T[k]
 				: never
 			: T[k]
@@ -61,9 +62,14 @@ type Validate<T> = {
 
 function createTransformerMap<
 	T extends Array<
-		[ts.SyntaxKind, { bivariant(state: TransformState, exp: ts.Expression): luau.Expression }["bivariant"]]
+		[
+			ts.SyntaxKind,
+			{ bivariant(state: TransformState, prereqs: Prereqs, exp: ts.Expression): luau.Expression }["bivariant"],
+		]
 	>,
->(values: Validate<[...T]>): Map<ts.SyntaxKind, (state: TransformState, exp: ts.Expression) => luau.Expression> {
+>(
+	values: Validate<[...T]>,
+): Map<ts.SyntaxKind, (state: TransformState, prereqs: Prereqs, exp: ts.Expression) => luau.Expression> {
 	return new Map(values);
 }
 
@@ -120,10 +126,14 @@ const TRANSFORMER_BY_KIND = createTransformerMap([
 	[ts.SyntaxKind.YieldExpression, transformYieldExpression],
 ]);
 
-export function transformExpression(state: TransformState, node: ts.Expression): luau.Expression {
+export function transformExpression(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.Expression,
+): luau.Expression {
 	const transformer = TRANSFORMER_BY_KIND.get(node.kind);
 	if (transformer) {
-		return transformer(state, node);
+		return transformer(state, prereqs, node);
 	}
 	assert(false, `Unknown expression: ${getKindName(node.kind)}`);
 }
