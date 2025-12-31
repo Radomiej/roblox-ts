@@ -6,6 +6,70 @@ Celem refaktoryzacji jest wprowadzenie klasy `Prereqs` do zarządzania wymagania
 
 ---
 
+## 🔄 Diagramy Architektury
+
+### Przed refaktoryzacją (stary wzorzec)
+
+```mermaid
+flowchart TD
+    subgraph "Statement Transform"
+        ST[transformStatement] --> |"state.capturePrereqs()"| CAPTURE[Capture Context]
+        CAPTURE --> ET[transformExpression]
+    end
+
+    subgraph "Expression Transform"
+        ET --> |"state.prereq(stmt)"| STATE[TransformState]
+        ET --> |"state.pushToVar(exp)"| STATE
+        STATE --> |"prereqList"| PREREQS[Prerequisites List]
+    end
+
+    style STATE fill:#ff6b6b,stroke:#333
+    style PREREQS fill:#ff6b6b,stroke:#333
+```
+
+### Po refaktoryzacji (nowy wzorzec)
+
+```mermaid
+flowchart TD
+    subgraph "Statement Transform"
+        ST2[transformStatement] --> |"new Prereqs()"| PREREQS2[Prereqs Object]
+        PREREQS2 --> ET2[transformExpression]
+    end
+
+    subgraph "Expression Transform"
+        ET2 --> |"prereqs.prereq(stmt)"| PREREQS2
+        ET2 --> |"prereqs.pushToVar(exp)"| PREREQS2
+    end
+
+    subgraph "Final"
+        ST2 --> |"state.prereqList(prereqs.statements)"| FINAL[Final Statements]
+    end
+
+    style PREREQS2 fill:#51cf66,stroke:#333
+    style FINAL fill:#51cf66,stroke:#333
+```
+
+### Przepływ danych - Expression Transforms
+
+```mermaid
+sequenceDiagram
+    participant ST as Statement Transform
+    participant P as Prereqs
+    participant ET as Expression Transform
+    participant SUB as Sub-Expression Transform
+
+    ST->>P: new Prereqs()
+    ST->>ET: transformExpression(state, prereqs, node)
+    ET->>P: prereqs.prereq(statement)
+    ET->>SUB: transformExpression(state, prereqs, subNode)
+    SUB->>P: prereqs.pushToVar(value)
+    SUB-->>ET: return expression
+    ET-->>ST: return expression
+    ST->>ST: state.prereqList(prereqs.statements)
+```
+
+---
+
 ## ✅ Co zostało ZROBIONE
 
 ### 1. Klasa Prereqs (100%)
@@ -210,26 +274,66 @@ npm run eslint
 
 ---
 
-## 📊 Statystyki postępu
+## 📊 Statystyki postępu (Aktualizacja: 31.12.2024)
 
 | Kategoria | Zrobione | Pozostało | % |
 |-----------|----------|-----------|---|
 | Prereqs class | 1/1 | 0 | 100% |
 | Macros | 3/3 | 0 | 100% |
 | Utilities | 2/2 | 0 | 100% |
-| Expression transforms | 34/34 | 0 | 100% |
+| Expression transforms (signatures) | 34/34 | 0 | 100% |
 | transformWritable | 1/1 | 0 | 100% |
 | BindingAccessor (getAccessorForBindingType) | 1/1 | 0 | 100% |
-| SpreadDestructor (4 files) | 4/4 | 0 | 100% |
-| Binding patterns (transformArrayBindingPattern) | 1/5 | 4 | 20% |
-| transformVariable | 0/1 | 1 | 0% |
-| transformObjectBindingPattern | 0/1 | 1 | 0% |
-| Class transforms | 0/4 | 4 | 0% |
-| JSX transforms | 0/5 | 5 | 0% |
-| Statement transforms (remaining calls) | 10/15 | 5 | 67% |
-| transformLogical | 0/2 | 2 | 0% |
-| transformOptionalChain | 0/1 | 1 | 0% |
-| **TOTAL** | ~57/78 | ~21 | **~73%** |
+| SpreadDestructor (5 files) | 5/5 | 0 | 100% |
+| transformVariable | 1/1 | 0 | 100% |
+| transformObjectBindingPattern | 1/1 | 0 | 100% |
+| transformArrayBindingPattern | 1/1 | 0 | 100% |
+| transformBindingName | 1/1 | 0 | 100% |
+| transformPropertyName | 1/1 | 0 | 100% |
+| transformParameters | 1/1 | 0 | 100% |
+| transformOptionalChain | 1/1 | 0 | 100% |
+| transformLogical | 1/1 | 0 | 100% |
+| transformLogicalOrCoalescingAssignment | 1/1 | 0 | 100% |
+| transformEntityName | 1/1 | 0 | 100% |
+| objectAccessor | 1/1 | 0 | 100% |
+| bitwise.ts | 1/1 | 0 | 100% |
+| createHoistDeclaration | 1/1 | 0 | 100% |
+| **Binding Assignment Patterns** | 0/2 | 2 | 0% |
+| **Class transforms (call sites)** | 2/4 | 2 | 50% |
+| **JSX transforms** | 0/5 | 5 | 0% |
+| **Statement transforms (call sites)** | 8/22 | 14 | 36% |
+| **TOTAL Core Changes** | ~65/78 | ~13 | **~83%** |
+
+### ⚠️ Pozostałe pliki do naprawienia (74 błędy TypeScript):
+
+**Binding Patterns:**
+- `transformArrayAssignmentPattern.ts` - 7 błędów
+- `transformObjectAssignmentPattern.ts` - 10 błędów
+
+**Class Transforms:**
+- `transformClassLikeDeclaration.ts` - 4 błędy
+- `transformDecorators.ts` - 1 błąd
+
+**Expression Transforms (call sites):**
+- `transformBinaryExpression.ts` - 5 błędów
+- `transformElementAccessExpression.ts` - błędy
+- `transformPropertyAccessExpression.ts` - błędy
+- `transformUnaryExpression.ts` - błędy
+- `transformVoidExpression.ts` - błędy
+
+**Statement Transforms:**
+- `transformExportAssignment.ts` - błędy
+- `transformExpressionStatement.ts` - błędy
+- `transformForOfStatement.ts` - 6 błędów
+- `transformFunctionDeclaration.ts` - 1 błąd
+- `transformImportDeclaration.ts` - 4 błędy
+- `transformImportEqualsDeclaration.ts` - 2 błędy
+- `transformModuleDeclaration.ts` - 2 błędy
+
+**JSX:**
+- `transformJsxAttributes.ts`
+- `transformJsxChildren.ts`
+- `transformJsxTagName.ts`
 
 ---
 

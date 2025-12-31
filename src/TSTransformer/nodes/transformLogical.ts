@@ -1,6 +1,7 @@
 import luau from "@roblox-ts/luau-ast";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { createTruthinessChecks, willCreateTruthinessChecks } from "TSTransformer/util/createTruthinessChecks";
 import { binaryExpressionChain } from "TSTransformer/util/expressionChain";
@@ -42,7 +43,10 @@ function getLogicalChain(
 ): Array<LogicalChainItem> {
 	return flattenByOperator(binaryExp, binaryOperatorKind).map((node, index, array) => {
 		const type = state.getType(node);
-		const [expression, statements] = state.capture(() => transformExpression(state, node));
+		const [expression, statements] = state.capture(() => {
+			const prereqs = new Prereqs();
+			return transformExpression(state, prereqs, node);
+		});
 		let inline = false;
 		if (enableInlining) {
 			const willWrap = index < array.length - 1 && willCreateTruthinessChecks(type);
@@ -147,11 +151,11 @@ function buildInlineConditionExpression(
 export function transformLogical(state: TransformState, node: ts.BinaryExpression): luau.Expression {
 	if (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
 		return buildInlineConditionExpression(state, node, node.operatorToken.kind, "and", (conditionId, node) =>
-			createTruthinessChecks(state, conditionId, node),
+			createTruthinessChecks(state, new Prereqs(), conditionId, node),
 		);
 	} else if (node.operatorToken.kind === ts.SyntaxKind.BarBarToken) {
 		return buildInlineConditionExpression(state, node, node.operatorToken.kind, "or", (conditionId, node) =>
-			luau.unary("not", createTruthinessChecks(state, conditionId, node)),
+			luau.unary("not", createTruthinessChecks(state, new Prereqs(), conditionId, node)),
 		);
 	} else if (node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken) {
 		const conditionBuilder = (conditionId: luau.TemporaryIdentifier) => luau.binary(conditionId, "==", luau.nil());

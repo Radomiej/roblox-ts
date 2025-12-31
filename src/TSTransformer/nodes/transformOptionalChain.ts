@@ -235,6 +235,7 @@ function isCompoundCall(item: ChainItem): item is PropertyCallItem | ElementCall
 
 function transformOptionalChainInner(
 	state: TransformState,
+	prereqs: Prereqs,
 	chain: Array<ChainItem>,
 	baseExpression: luau.Expression,
 	tempId: luau.TemporaryIdentifier | undefined = undefined,
@@ -306,7 +307,7 @@ function transformOptionalChainInner(
 					newExpression = transformChainItem(state, innerPrereqs, tempId!, item);
 					prereqs.prereqList(innerPrereqs.statements);
 				}
-				return transformOptionalChainInner(state, chain, newExpression, tempId, index + 1);
+				return transformOptionalChainInner(state, prereqs, chain, newExpression, tempId, index + 1);
 			});
 
 			const isUsed = !luau.isNone(newValue) && !isUsedAsStatement(item.node);
@@ -346,6 +347,7 @@ function transformOptionalChainInner(
 	} else {
 		return transformOptionalChainInner(
 			state,
+			prereqs,
 			chain,
 			transformChainItem(state, prereqs, baseExpression, item),
 			tempId,
@@ -360,5 +362,5 @@ export function transformOptionalChain(
 	node: ts.PropertyAccessExpression | ts.ElementAccessExpression | ts.CallExpression,
 ): luau.Expression {
 	const { chain, expression } = flattenOptionalChain(state, node);
-	return transformOptionalChainInner(state, chain, transformExpression(state, prereqs, expression));
+	return transformOptionalChainInner(state, prereqs, chain, transformExpression(state, prereqs, expression));
 }

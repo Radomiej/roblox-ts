@@ -63,26 +63,29 @@ function transformOptimizedArrayAssignmentPattern(
 					ts.isElementAccessExpression(element) ||
 					ts.isPropertyAccessExpression(element)
 				) {
-					const [id, idPrereqs] = state.capture(() => transformWritableExpression(state, element, true));
+					const [id, idPrereqs] = state.capture(() => {
+						const innerPrereqs = new Prereqs();
+						return transformWritableExpression(state, innerPrereqs, element, true);
+					});
 					luau.list.pushList(writesPrereqs, idPrereqs);
 					luau.list.push(writes, id);
 					if (initializer) {
-						state.prereq(transformInitializer(state, id, initializer));
+						prereqs.prereq(transformInitializer(state, prereqs, id, initializer));
 					}
 				} else if (ts.isArrayLiteralExpression(element)) {
 					const id = luau.tempId("binding");
 					luau.list.push(variables, id);
 					luau.list.push(writes, id);
 					if (initializer) {
-						state.prereq(transformInitializer(state, id, initializer));
+						prereqs.prereq(transformInitializer(state, prereqs, id, initializer));
 					}
-					transformArrayAssignmentPattern(state, element, id);
+					transformArrayAssignmentPattern(state, prereqs, element, id);
 				} else if (ts.isObjectLiteralExpression(element)) {
 					const id = luau.tempId("binding");
 					luau.list.push(variables, id);
 					luau.list.push(writes, id);
 					if (initializer) {
-						prereqs.prereq(transformInitializer(state, id, initializer));
+						prereqs.prereq(transformInitializer(state, prereqs, id, initializer));
 					}
 					transformObjectAssignmentPattern(state, prereqs, element, id);
 				} else {
@@ -135,11 +138,11 @@ export function transformBinaryExpression(state: TransformState, prereqs: Prereq
 		operatorKind === ts.SyntaxKind.BarBarToken ||
 		operatorKind === ts.SyntaxKind.QuestionQuestionToken
 	) {
-		return transformLogical(state, prereqs, node);
+		return transformLogical(state, node);
 	}
 
 	if (ts.isLogicalOrCoalescingAssignmentExpression(node)) {
-		return transformLogicalOrCoalescingAssignmentExpression(state, prereqs, node);
+		return transformLogicalOrCoalescingAssignmentExpression(state, node);
 	}
 
 	if (ts.isAssignmentOperator(operatorKind)) {
