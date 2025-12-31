@@ -53,10 +53,10 @@ export function transformVariable(
 	if (state.isHoisted.get(symbol) === true) {
 		// no need to do `x = nil` if the variable is already created
 		if (right) {
-			state.prereq(luau.create(luau.SyntaxKind.Assignment, { left, operator: "=", right }));
+			prereqs.prereq(luau.create(luau.SyntaxKind.Assignment, { left, operator: "=", right }));
 		}
 	} else {
-		state.prereq(luau.create(luau.SyntaxKind.VariableDeclaration, { left, right }));
+		prereqs.prereq(luau.create(luau.SyntaxKind.VariableDeclaration, { left, right }));
 	}
 
 	return left;
@@ -118,27 +118,16 @@ export function transformVariableDeclaration(
 	let value: luau.Expression | undefined;
 	if (node.initializer) {
 		// must transform right _before_ checking isHoisted, that way references inside of value can be hoisted
-		luau.list.pushList(
-			statements,
-			// non-null assertion on node.initializer because inside callback
-			state.capturePrereqs(() => {
-				const prereqs = new Prereqs();
-				value = transformExpression(state, prereqs, node.initializer!);
-				return prereqs.statements;
-			}),
-		);
+		const prereqs = new Prereqs();
+		value = transformExpression(state, prereqs, node.initializer!);
+		luau.list.pushList(statements, prereqs.statements);
 	}
 
 	const name = node.name;
 	if (ts.isIdentifier(name)) {
-		luau.list.pushList(
-			statements,
-			state.capturePrereqs(() => {
-				const prereqs = new Prereqs();
-				transformVariable(state, prereqs, name, value);
-				return prereqs.statements;
-			}),
-		);
+		const prereqs = new Prereqs();
+		transformVariable(state, prereqs, name, value);
+		luau.list.pushList(statements, prereqs.statements);
 	} else {
 		// in destructuring, rhs must be executed first
 		assert(node.initializer && value);
@@ -168,34 +157,24 @@ export function transformVariableDeclaration(
 			) {
 				luau.list.pushList(statements, transformOptimizedArrayBindingPattern(state, name, value.members));
 			} else {
-				luau.list.pushList(
-					statements,
-					state.capturePrereqs(() => {
-						const prereqs = new Prereqs();
-						transformArrayBindingPattern(
-							state,
-							prereqs,
-							name,
-							getTargetIdForBindingPattern(state, name, value!),
-						);
-						return prereqs.statements;
-					}),
+				const prereqs = new Prereqs();
+				transformArrayBindingPattern(
+					state,
+					prereqs,
+					name,
+					getTargetIdForBindingPattern(state, name, value!),
 				);
+				luau.list.pushList(statements, prereqs.statements);
 			}
 		} else {
-			luau.list.pushList(
-				statements,
-				state.capturePrereqs(() => {
-					const prereqs = new Prereqs();
-					transformObjectBindingPattern(
-						state,
-						prereqs,
-						name,
-						getTargetIdForBindingPattern(state, name, value!),
-					);
-					return prereqs.statements;
-				}),
+			const prereqs = new Prereqs();
+			transformObjectBindingPattern(
+				state,
+				prereqs,
+				name,
+				getTargetIdForBindingPattern(state, name, value!),
 			);
+			luau.list.pushList(statements, prereqs.statements);
 		}
 	}
 
@@ -250,10 +229,9 @@ function transformUsingDeclaration(
 	for (const declaration of node.declarations) {
 		if (!declaration.initializer) continue;
 
-		const [initExp, initPrereqs] = state.capture(() =>
-			transformExpression(state, new Prereqs(), declaration.initializer!),
-		);
-		luau.list.pushList(statements, initPrereqs);
+		const initPrereqs = new Prereqs();
+		const initExp = transformExpression(state, initPrereqs, declaration.initializer!);
+		luau.list.pushList(statements, initPrereqs.statements);
 
 		const name = declaration.name;
 		if (!ts.isIdentifier(name)) {
@@ -299,10 +277,9 @@ export function transformVariableDeclarationList(
 			// Transform as regular const
 			const statements = luau.list.make<luau.Statement>();
 			for (const declaration of node.declarations) {
-				const [variableStatements, prereqs] = state.capture(() =>
-					transformVariableDeclaration(state, declaration),
-				);
-				luau.list.pushList(statements, prereqs);
+				const prereqs = new Prereqs();
+				const variableStatements = transformVariableDeclaration(state, declaration);
+				luau.list.pushList(statements, prereqs.statements);
 				luau.list.pushList(statements, variableStatements);
 			}
 			return statements;
@@ -311,8 +288,9 @@ export function transformVariableDeclarationList(
 
 	const statements = luau.list.make<luau.Statement>();
 	for (const declaration of node.declarations) {
-		const [variableStatements, prereqs] = state.capture(() => transformVariableDeclaration(state, declaration));
-		luau.list.pushList(statements, prereqs);
+		const prereqs = new Prereqs();
+		const variableStatements = transformVariableDeclaration(state, declaration);
+		luau.list.pushList(statements, prereqs.statements);
 		luau.list.pushList(statements, variableStatements);
 	}
 

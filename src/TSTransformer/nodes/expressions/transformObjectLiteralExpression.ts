@@ -24,11 +24,11 @@ function transformPropertyAssignment(
 	const right = transformExpression(state, prereqs, initializer);
 
 	if (!luau.list.isEmpty(prereqs.statements)) {
-		disableMapInline(state, ptr);
+		disableMapInline(state, prereqs, ptr);
 		left = prereqs.pushToVar(left, "left");
 	}
 
-	assignToMapPointer(state, ptr, left, right);
+	assignToMapPointer(state, prereqs, ptr, left, right);
 }
 
 function transformSpreadAssignment(
@@ -60,7 +60,7 @@ function transformSpreadAssignment(
 		return;
 	}
 
-	disableMapInline(state, ptr);
+	disableMapInline(state, prereqs, ptr);
 	let spreadExp = transformExpression(state, prereqs, property.expression);
 	if (!definitelyObject) {
 		spreadExp = prereqs.pushToVarIfComplex(spreadExp, "spread");
@@ -123,7 +123,7 @@ export function transformObjectLiteralExpression(
 
 	// Add Symbol.iterator support if object has [Symbol.iterator] method
 	if (hasSymbolProperty(state.getType(node), "iterator")) {
-		disableMapInline(state, ptr);
+		disableMapInline(state, prereqs, ptr);
 		// setmetatable(object, { __iter = TS.objectIterator })
 		prereqs.prereq(
 			luau.create(luau.SyntaxKind.CallStatement, {

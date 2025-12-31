@@ -138,11 +138,11 @@ export function transformBinaryExpression(state: TransformState, prereqs: Prereq
 		operatorKind === ts.SyntaxKind.BarBarToken ||
 		operatorKind === ts.SyntaxKind.QuestionQuestionToken
 	) {
-		return transformLogical(state, node);
+		return transformLogical(state, prereqs, node);
 	}
 
 	if (ts.isLogicalOrCoalescingAssignmentExpression(node)) {
-		return transformLogicalOrCoalescingAssignmentExpression(state, node);
+		return transformLogicalOrCoalescingAssignmentExpression(state, prereqs, node);
 	}
 
 	if (ts.isAssignmentOperator(operatorKind)) {

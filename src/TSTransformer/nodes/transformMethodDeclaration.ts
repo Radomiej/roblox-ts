@@ -32,7 +32,7 @@ export function transformMethodDeclaration(
 	let { statements, parameters, hasDotDotDot } = transformParameters(state, node);
 	luau.list.pushList(statements, transformStatementList(state, node.body, node.body.statements));
 
-	let name = state.noPrereqs(() => transformPropertyName(state, new Prereqs(), node.name));
+	let name = transformPropertyName(state, new Prereqs(), node.name);
 
 	if (ts.hasDecorators(node) || node.parameters.some(parameter => ts.hasDecorators(parameter))) {
 		if (!luau.isSimplePrimitive(name)) {
@@ -98,10 +98,9 @@ export function transformMethodDeclaration(
 	}
 
 	// we have to use `class[name] = function()`
-	luau.list.pushList(
-		result,
-		state.capturePrereqs(() => assignToMapPointer(state, ptr, name, expression)),
-	);
+	const assignPrereqs = new Prereqs();
+	assignToMapPointer(state, assignPrereqs, ptr, name, expression);
+	luau.list.pushList(result, assignPrereqs.statements);
 
 	return result;
 }

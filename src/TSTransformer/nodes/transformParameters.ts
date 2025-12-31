@@ -24,7 +24,9 @@ function optimizeArraySpreadParameter(
 		} else {
 			const name = element.name;
 			if (ts.isIdentifier(name)) {
-				const paramId = transformIdentifierDefined(state, new Prereqs(), name);
+				const prereqs = new Prereqs();
+				const paramId = transformIdentifierDefined(state, prereqs, name);
+				state.prereqList(prereqs.statements);
 				validateIdentifier(state, name);
 				luau.list.push(parameters, paramId);
 				if (element.initializer) {

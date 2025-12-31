@@ -36,10 +36,9 @@ export function transformReturnStatementInner(
 
 	const innerReturnExp = skipDownwards(returnExp);
 	if (ts.isCallExpression(innerReturnExp) && isTupleMacro(state, innerReturnExp)) {
-		const [args, prereqs] = state.capture(() =>
-			ensureTransformOrder(state, new Prereqs(), innerReturnExp.arguments),
-		);
-		luau.list.pushList(result, prereqs);
+		const prereqs = new Prereqs();
+		const args = ensureTransformOrder(state, prereqs, innerReturnExp.arguments);
+		luau.list.pushList(result, prereqs.statements);
 		expression = luau.list.make(...args);
 	} else {
 		const prereqs = new Prereqs();
@@ -68,7 +67,12 @@ export function transformReturnStatementInner(
 			}),
 		);
 	} else {
-		luau.list.push(result, luau.create(luau.SyntaxKind.ReturnStatement, { expression }));
+		luau.list.push(
+			result,
+			luau.create(luau.SyntaxKind.ReturnStatement, {
+				expression: luau.list.isList(expression) ? expression : luau.list.make(expression),
+			}),
+		);
 	}
 
 	return result;

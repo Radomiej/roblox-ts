@@ -44,7 +44,7 @@ export function transformArrayLiteralExpression(state: TransformState, prereqs: 
 		const element = node.elements[i];
 		if (ts.isSpreadElement(element)) {
 			if (luau.isArray(ptr.value)) {
-				disableArrayInline(state, ptr);
+				disableArrayInline(state, prereqs, ptr);
 				updateLengthId();
 			}
 			assert(luau.isAnyIdentifier(ptr.value));
@@ -56,6 +56,7 @@ export function transformArrayLiteralExpression(state: TransformState, prereqs: 
 			prereqs.prereqList(
 				addIterableToArrayBuilder(
 					state,
+					prereqs,
 					spreadExp,
 					ptr.value,
 					lengthId,
@@ -67,13 +68,12 @@ export function transformArrayLiteralExpression(state: TransformState, prereqs: 
 		} else {
 			const expression = transformExpression(state, prereqs, element);
 			if (luau.isArray(ptr.value) && !luau.list.isEmpty(prereqs.statements)) {
-				disableArrayInline(state, ptr);
+				disableArrayInline(state, prereqs, ptr);
 				updateLengthId();
 			}
 			if (luau.isArray(ptr.value)) {
 				luau.list.push(ptr.value.members, expression);
 			} else {
-				prereqs.prereqList(prereqs.statements);
 				prereqs.prereq(
 					luau.create(luau.SyntaxKind.Assignment, {
 						left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {

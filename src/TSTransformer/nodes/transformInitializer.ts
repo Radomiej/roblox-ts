@@ -10,8 +10,9 @@ export function transformInitializer(
 	id: luau.WritableExpression,
 	initializer: ts.Expression,
 ) {
-	const exp = transformExpression(state, prereqs, initializer);
-	prereqs.prereq(
+	const innerPrereqs = new Prereqs();
+	const exp = transformExpression(state, innerPrereqs, initializer);
+	innerPrereqs.prereq(
 		luau.create(luau.SyntaxKind.Assignment, {
 			left: id,
 			operator: "=",
@@ -21,6 +22,6 @@ export function transformInitializer(
 	return luau.create(luau.SyntaxKind.IfStatement, {
 		condition: luau.binary(id, "==", luau.nil()),
 		elseBody: luau.list.make(),
-		statements: prereqs.statements,
+		statements: innerPrereqs.statements,
 	});
 }

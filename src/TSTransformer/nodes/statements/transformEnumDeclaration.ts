@@ -57,69 +57,73 @@ export function transformEnumDeclaration(state: TransformState, node: ts.EnumDec
 		);
 	}
 
-	const statements = state.capturePrereqs(() => {
-		const inverseId = state.pushToVar(luau.map(), "inverse");
-		state.prereq(
+	const innerPrereqs = new Prereqs();
+	const inverseId = innerPrereqs.pushToVar(luau.map(), "inverse");
+	innerPrereqs.prereq(
+		luau.create(luau.SyntaxKind.Assignment, {
+			left,
+			operator: "=",
+			right: luau.call(luau.globals.setmetatable, [
+				luau.map(),
+				luau.map([[luau.strings.__index, inverseId]]),
+			]),
+		}),
+	);
+
+	for (const member of node.members) {
+		const name = state.noPrereqs(() => transformPropertyName(state, innerPrereqs, member.name));
+		const index = expressionMightMutate(
+			state,
+			name,
+			ts.isComputedPropertyName(member.name) ? member.name.expression : member.name,
+		)
+			? // note: we don't use pushToVarIfComplex here
+				// because identifier also needs to be pushed
+				// since the value calculation might reassign the variable
+				innerPrereqs.pushToVar(name)
+			: name;
+
+		const value = state.typeChecker.getConstantValue(member);
+		let valueExp: luau.Expression;
+		if (typeof value === "string") {
+			valueExp = luau.string(value);
+		} else if (typeof value === "number") {
+			valueExp = luau.number(value);
+		} else {
+			// constantValue is always number without initializer, so assert is safe
+			assert(member.initializer);
+			valueExp = innerPrereqs.pushToVarIfComplex(
+				transformExpression(state, innerPrereqs, member.initializer),
+				"value",
+			);
+		}
+
+		innerPrereqs.prereq(
 			luau.create(luau.SyntaxKind.Assignment, {
-				left,
+				left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+					expression: left,
+					index,
+				}),
 				operator: "=",
-				right: luau.call(luau.globals.setmetatable, [
-					luau.map(),
-					luau.map([[luau.strings.__index, inverseId]]),
-				]),
+				right: valueExp,
 			}),
 		);
 
-		for (const member of node.members) {
-			const name = state.noPrereqs(() => transformPropertyName(state, new Prereqs(), member.name));
-			const index = expressionMightMutate(
-				state,
-				name,
-				ts.isComputedPropertyName(member.name) ? member.name.expression : member.name,
-			)
-				? // note: we don't use pushToVarIfComplex here
-					// because identifier also needs to be pushed
-					// since the value calculation might reassign the variable
-					state.pushToVar(name)
-				: name;
-
-			const value = state.typeChecker.getConstantValue(member);
-			let valueExp: luau.Expression;
-			if (typeof value === "string") {
-				valueExp = luau.string(value);
-			} else if (typeof value === "number") {
-				valueExp = luau.number(value);
-			} else {
-				// constantValue is always number without initializer, so assert is safe
-				assert(member.initializer);
-				valueExp = state.pushToVarIfComplex(transformExpression(state, new Prereqs(), member.initializer), "value");
-			}
-
-			state.prereq(
+		if (needsInverseEntry(state, member)) {
+			innerPrereqs.prereq(
 				luau.create(luau.SyntaxKind.Assignment, {
 					left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-						expression: left,
-						index,
+						expression: inverseId,
+						index: valueExp,
 					}),
 					operator: "=",
-					right: valueExp,
+					right: index,
 				}),
 			);
-
-			if (needsInverseEntry(state, member)) {
-				state.prereq(
-					luau.create(luau.SyntaxKind.Assignment, {
-						left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-							expression: inverseId,
-							index: valueExp,
-						}),
-						operator: "=",
-						right: index,
-					}),
-				);
-			}
 		}
-	});
+	}
+
+	const statements = innerPrereqs.statements;
 
 	const list = luau.list.make<luau.Statement>(luau.create(luau.SyntaxKind.DoStatement, { statements }));
 	if (!isHoisted) {

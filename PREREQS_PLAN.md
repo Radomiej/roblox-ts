@@ -1,6 +1,12 @@
 # Prereqs Refactoring Plan
 
-## 📋 Podsumowanie Refaktoryzacji
+## 📋 Status Refaktoryzacji (31 Dec 2024)
+
+**Kompilacja TypeScript:** ✅ **0 błędów**
+**Testy TypeScript:** ✅ **142/142 przeszło**
+**Testy Roblox:** ⚠️ **390/498 przeszło, 108 niepowodzeń**
+
+### Podsumowanie
 
 Celem refaktoryzacji jest wprowadzenie klasy `Prereqs` do zarządzania wymaganiami wstępnymi (prerequisite statements) podczas transformacji AST. Zamiast używać `state.prereq()`, `state.pushToVar()` itp., funkcje transformacji używają teraz obiektu `Prereqs` przekazywanego jako parametr.
 
@@ -298,48 +304,87 @@ npm run eslint
 | objectAccessor | 1/1 | 0 | 100% |
 | bitwise.ts | 1/1 | 0 | 100% |
 | createHoistDeclaration | 1/1 | 0 | 100% |
-| **Binding Assignment Patterns** | 0/2 | 2 | 0% |
-| **Class transforms (call sites)** | 2/4 | 2 | 50% |
-| **JSX transforms** | 0/5 | 5 | 0% |
-| **Statement transforms (call sites)** | 8/22 | 14 | 36% |
-| **TOTAL Core Changes** | ~65/78 | ~13 | **~83%** |
+| **Binding Assignment Patterns** | 2/2 | 0 | 100% |
+| **Class transforms (call sites)** | 4/4 | 0 | 100% |
+| **JSX transforms** | 5/5 | 0 | 100% |
+| **Statement transforms (call sites)** | 22/22 | 0 | 100% |
+| **TypeScript Compilation** | ✅ | 0 errors | **100%** |
+| **TypeScript Tests** | 142/142 | 0 failures | **100%** |
+| **Roblox Tests** | 390/498 | 108 failures | **78%** |
 
-### ⚠️ Pozostałe pliki do naprawienia (74 błędy TypeScript):
+### ✅ Naprawione pliki (wszystkie błędy TypeScript wyeliminowane):
 
 **Binding Patterns:**
-- `transformArrayAssignmentPattern.ts` - 7 błędów
-- `transformObjectAssignmentPattern.ts` - 10 błędów
+- ✅ `transformArrayAssignmentPattern.ts` - wszystkie wywołania zaktualizowane
+- ✅ `transformObjectAssignmentPattern.ts` - wszystkie wywołania zaktualizowane
+- ✅ `transformBindingName.ts` - zaktualizowane
 
 **Class Transforms:**
-- `transformClassLikeDeclaration.ts` - 4 błędy
-- `transformDecorators.ts` - 1 błąd
+- ✅ `transformClassLikeDeclaration.ts` - dodano import Prereqs, naprawiono wywołania
+- ✅ `transformDecorators.ts` - naprawione wywołanie transformExpression
 
-**Expression Transforms (call sites):**
-- `transformBinaryExpression.ts` - 5 błędów
-- `transformElementAccessExpression.ts` - błędy
-- `transformPropertyAccessExpression.ts` - błędy
-- `transformUnaryExpression.ts` - błędy
-- `transformVoidExpression.ts` - błędy
+**Expression Transforms:**
+- ✅ `transformBinaryExpression.ts` - naprawione wywołania, usunięto prereqs z createBinaryFromOperator
+- ✅ `transformElementAccessExpression.ts` - dodano prereqs do transformOptionalChain
+- ✅ `transformPropertyAccessExpression.ts` - dodano prereqs do transformOptionalChain
+- ✅ `transformUnaryExpression.ts` - dodano prereqs do transformWritableExpression
+- ✅ `transformVoidExpression.ts` - usunięto prereqs z transformExpressionStatementInner
+- ✅ `transformClassExpression.ts` - usunięto prereqs z transformClassLikeDeclaration
+- ✅ `transformArrayLiteralExpression.ts` - częściowo naprawione (state→prereqs)
 
 **Statement Transforms:**
-- `transformExportAssignment.ts` - błędy
-- `transformExpressionStatement.ts` - błędy
-- `transformForOfStatement.ts` - 6 błędów
-- `transformFunctionDeclaration.ts` - 1 błąd
-- `transformImportDeclaration.ts` - 4 błędy
-- `transformImportEqualsDeclaration.ts` - 2 błędy
-- `transformModuleDeclaration.ts` - 2 błędy
+- ✅ `transformExportAssignment.ts` - wszystkie wywołania zaktualizowane
+- ✅ `transformExpressionStatement.ts` - dodano prereqs do transformWritableExpression/Assignment
+- ✅ `transformForOfStatement.ts` - naprawiono state.capture bloki
+- ✅ `transformFunctionDeclaration.ts` - dodano prereqs do transformIdentifierDefined
+- ✅ `transformImportDeclaration.ts` - niezmienione (nie przyjmuje prereqs)
+- ✅ `transformImportEqualsDeclaration.ts` - naprawiono wywołania transformVariable
+- ✅ `transformModuleDeclaration.ts` - dodano prereqs do transformIdentifierDefined
+- ✅ `transformEnumDeclaration.ts` - dodano prereqs do transformExpression
 
 **JSX:**
-- `transformJsxAttributes.ts`
-- `transformJsxChildren.ts`
-- `transformJsxTagName.ts`
+- ✅ `transformJsxAttributes.ts` - wszystkie wywołania zaktualizowane
+- ✅ `transformJsxChildren.ts` - dodano prereqs, naprawiono ensureTransformOrder
+- ✅ `transformJsxTagName.ts` - dodano prereqs do transformExpression
+
+**Core:**
+- ✅ `transformInitializer.ts` - używa własnego innerPrereqs aby uniknąć cyklicznych referencji
 
 ---
 
-## ⚠️ Uwagi
+## ⚠️ Znane Problemy i Ostrzeżenia
+
+### 🐛 Główny Problem: Niespójne użycie state.prereq vs prereqs.prereq
+
+**Objawy:**
+- 108 testów Roblox nie przechodzi (głównie array spread, destructure)
+- Wartości `nil` zamiast oczekiwanych wartości
+- Nieprawidłowa kolejność statement'ów w generowanym kodzie Luau
+
+**Przyczyna:**
+Wiele funkcji przyjmuje `prereqs: Prereqs` jako parametr, ale wewnątrz nadal używa `state.prereq()` zamiast `prereqs.prereq()`. To powoduje, że prerequisite statements są dodawane do globalnego state zamiast do lokalnego obiektu prereqs, co skutkuje:
+
+1. Statement'y wykonywane w złej kolejności
+2. Statement'y dodawane poza blokiem `state.capture()`
+3. Brak synchronizacji między `prereqs.statements` a faktycznie wykonanymi operacjami
+
+**Dotknięte pliki:**
+- `transformArrayLiteralExpression.ts` - częściowo naprawione (używa prereqs.prereq)
+- `transformForOfStatement.ts` - mieszane użycie
+- `transformInitializer.ts` - naprawione (używa własnego innerPrereqs)
+- Wiele innych plików expression transforms
+
+**Rozwiązanie:**
+Systematycznie przejrzeć wszystkie funkcje które przyjmują `prereqs: Prereqs` i zamienić wewnętrzne wywołania `state.prereq()` na `prereqs.prereq()`. Dotyczy to szczególnie:
+- Funkcji transformacji wyrażeń
+- Funkcji pomocniczych w binding patterns
+- Wewnętrznych funkcji zagnieżdżonych
+
+### ⚠️ Uwagi
 
 1. Po każdej zmianie uruchom `npm run build` aby sprawdzić błędy
 2. Nie usuwaj `state.capturePrereqs` ani `state.capture` - są nadal potrzebne w statement transforms
+3. Funkcja `transformInitializer` używa własnego `innerPrereqs` aby uniknąć cyklicznych referencji
+4. W `state.capture()` blokach, prereqs muszą być utworzone wewnątrz i ich statements dodane do state
 3. Niektóre pliki mają mixed usage - część funkcji zaktualizowana, część nie
 4. ESLint warnings o nieużywanych parametrach są OK dla interfejsu spójności

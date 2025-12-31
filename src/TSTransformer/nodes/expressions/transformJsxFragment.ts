@@ -22,7 +22,7 @@ export function transformJsxFragment(state: TransformState, prereqs: Prereqs, no
 
 	const args = [transformEntityName(state, jsxFragmentFactoryEntity)];
 
-	const transformedChildren = transformJsxChildren(state, node.children);
+	const transformedChildren = transformJsxChildren(state, prereqs, node.children);
 
 	// props parameter
 	if (transformedChildren.length > 0) {

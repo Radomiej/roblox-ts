@@ -9,7 +9,7 @@ import { ensureTransformOrder } from "TSTransformer/util/ensureTransformOrder";
 import { fixupWhitespaceAndDecodeEntities } from "TSTransformer/util/fixupWhitespaceAndDecodeEntities";
 import ts from "typescript";
 
-export function transformJsxChildren(state: TransformState, children: ReadonlyArray<ts.JsxChild>) {
+export function transformJsxChildren(state: TransformState, prereqs: Prereqs, children: ReadonlyArray<ts.JsxChild>) {
 	const lastJsxChildIndex = findLastIndex(
 		children,
 		child => !ts.isJsxText(child) || !child.containsOnlyTriviaWhiteSpaces,
@@ -22,7 +22,6 @@ export function transformJsxChildren(state: TransformState, children: ReadonlyAr
 		}
 	}
 
-	const prereqs = new Prereqs();
 	return ensureTransformOrder(
 		state,
 		prereqs,
