@@ -19,8 +19,10 @@ These items are explicitly assigned to the v3.1.0 milestone on GitHub.
     *   Customize `instanceof` behavior using symbols.
 *   **#1829 Allow `LuaTuple` destructure assignment**
     *   Syntactic sugar for handling Lua multi-return values closer to TS destructuring.
-*   **#2015 Custom Math Prototype**
-    *   Extensions or fixes to the Math object behavior.
+*   **#2015 Custom Math Prototype** ✅ **COMPLETED**
+    *   Generic math operator types (Add, Sub, Mul, Div, IDiv, Mod, Pow, Concat, Eq, Lt, Le, Unm, Len)
+    *   Enables type-safe operator overloading for custom types
+    *   Backward compatible with existing Roblox math types
 *   **#2811 `rbxtsc sourcemap` + `rbxtsc typegen`**
     *   New CLI commands for better tooling integration.
 
