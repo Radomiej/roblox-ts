@@ -86,10 +86,34 @@ PRs that address specific bugs or correctness issues and appear ready for testin
     *   Replaced global `unpack` with `table.unpack` in compiler output and runtime.
 
 ### Phase 2: Core Milestone Implementation (In Progress)
-1.  **TS Upgrade (#2807)**: Should be prioritized as it may conflict with other changes. Current TS lib its 5.9.3
-2.  **Runtime Features**: Implement `using` (#2616) and `Symbol` features (#1826, #2537).
-3.  **CLI Tools**: Finalize `sourcemap` and `typegen` commands (#2811).
-4.  **Update Runtime & Compiler to use modern Roblox APIs** (Implemented)
+1.  **TS Upgrade (#2807)**: ✅ **COMPLETED** - Upgraded to TypeScript 5.9.3
+    *   Fixed API breaking changes (`program.state`, `ts.isNodeKind()`)
+    *   Added diagnostics for BigInt/Iterable/PrivateIdentifier destructuring
+    *   All 140 tests passing
+2.  **Symbol Features (#1826, #2537)**: ✅ **COMPLETED** (Based on PR #2631)
+    *   **Runtime**: All 14 well-known symbols in `RuntimeLib.lua` + `objectIterator` function
+    *   **Compiler - Symbol.iterator**:
+        *   `hasSymbolProperty` utility for detecting Symbol properties
+        *   `isPossiblyMacroIterationType` helper to distinguish known iterables from generic Iterables
+        *   `buildDefaultLoop` for for-of loops with Symbol.iterator (Lua `for-in` with `__iter`)
+        *   `addIterable` for spread/array builders with Symbol.iterator
+        *   Classes: Auto-add `__iter` metamethod if class has `[Symbol.iterator]`
+        *   Objects: Auto-add `__iter` metamethod if object has `[Symbol.iterator]`
+    *   **Compiler - Symbol.hasInstance**: Custom `instanceof` logic in `TS.instanceof`
+    *   **Tests**: `symbol.spec.ts` passing (10 tests total)
+3.  **`using` statements (#2616)**: 🚧 **DETECTION IMPLEMENTED**
+    *   **Runtime**: `Symbol.dispose`, `Symbol.asyncDispose`, `TS.using()`, `TS.disposableStack()` in RuntimeLib.lua
+    *   **Compiler**:
+        *   `isUsingDeclaration()`, `isAwaitUsingDeclaration()` - correct NodeFlags detection (Using=4, AwaitUsing=6)
+        *   `transformUsingDeclaration()` - shows diagnostic, transforms as const for now
+        *   `noUsingStatement` diagnostic with helpful message
+    *   **Tests**: `noUsingStatement.ts`, `noUsingStatement.2.ts` diagnostic tests passing
+    *   **TODO for full implementation**:
+        *   Block-level transformation to wrap in try-finally
+        *   Reverse dispose order (LIFO)
+        *   Error handling with SuppressedError
+4.  **CLI Tools**: Finalize `sourcemap` and `typegen` commands (#2811). - **PENDING**
+5.  **Update Runtime & Compiler to use modern Roblox APIs** ✅ **COMPLETED**
     *   Replaced deprecated `wait`, `spawn`, `delay` with `task` library in `Promise.lua` and `RuntimeLib.lua`.
     *   Replaced global `unpack` with `table.unpack` in compiler output and runtime.
 

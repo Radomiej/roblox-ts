@@ -1,6 +1,5 @@
 import luau from "@roblox-ts/luau-ast";
 import { errors } from "Shared/diagnostics";
-import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
 import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
@@ -10,8 +9,8 @@ import {
 	isGeneratorType,
 	isIterableFunctionLuaTupleType,
 	isIterableFunctionType,
-	isIterableType,
 	isMapType,
+	isPossiblyMacroIterationType,
 	isSetType,
 	isSharedTableType,
 	isStringType,
@@ -431,21 +430,12 @@ export function getAddIterableToArrayBuilder(
 		return addIterableFunction;
 	} else if (isDefinitelyType(type, isGeneratorType(state))) {
 		return addGenerator;
-	} else if (isDefinitelyType(type, isIterableType(state))) {
-		return (state, expression, arrayId, lengthId, amtElementsSinceUpdate, shouldUpdateLengthId) =>
-			addIterable(
-				state,
-				expression,
-				arrayId,
-				lengthId,
-				amtElementsSinceUpdate,
-				shouldUpdateLengthId,
-				node,
-			);
-	} else if (type.isUnion()) {
+	} else if (isPossiblyMacroIterationType(state, type)) {
 		DiagnosticService.addDiagnostic(errors.noMacroUnion(node));
 		return () => luau.list.make();
 	} else {
-		assert(false, `Iteration type not implemented: ${state.typeChecker.typeToString(type)}`);
+		// Default to Symbol.iterator for unknown types
+		return (state, expression, arrayId, lengthId, amtElementsSinceUpdate, shouldUpdateLengthId) =>
+			addIterable(state, expression, arrayId, lengthId, amtElementsSinceUpdate, shouldUpdateLengthId, node);
 	}
 }

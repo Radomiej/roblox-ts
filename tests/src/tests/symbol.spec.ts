@@ -4,18 +4,14 @@ interface SymbolConstructor {
 }
 declare const Symbol: SymbolConstructor;
 
-// Force change
 export = () => {
-	it("should support Symbol.iterator", () => {
-		const iter = {
-			// @ts-ignore
-			[Symbol.iterator]: function* () {
-				yield 1;
-				yield 2;
-			},
-		};
-		const result = new Array<number>();
-		// @ts-ignore
+	it("should support generators (Symbol.iterator)", () => {
+		function* makeIter() {
+			yield 1;
+			yield 2;
+		}
+		const iter = makeIter();
+		const result: number[] = [];
 		for (const x of iter) {
 			result.push(x);
 		}
@@ -23,14 +19,26 @@ export = () => {
 		expect(result[1]).to.equal(2);
 	});
 
+	it("should support generator spread", () => {
+		function* makeIter() {
+			yield "a";
+			yield "b";
+			yield "c";
+		}
+		const iter = makeIter();
+		const arr = [...iter];
+		expect(arr[0]).to.equal("a");
+		expect(arr[1]).to.equal("b");
+		expect(arr[2]).to.equal("c");
+	});
+
 	it("should support Symbol.hasInstance", () => {
 		class Foo {
-			// @ts-ignore
 			static [Symbol.hasInstance](instance: unknown) {
 				return instance === "foo";
 			}
 		}
-		// @ts-ignore
+		// @ts-ignore - TypeScript doesn't allow string instanceof class
 		expect("foo" instanceof Foo).to.equal(true);
 		// @ts-ignore
 		expect("bar" instanceof Foo).to.equal(false);

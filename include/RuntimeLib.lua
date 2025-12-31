@@ -153,6 +153,24 @@ function TS.import(context, module, ...)
 	return data
 end
 
+function TS.objectIterator(obj)
+	local keys = {}
+	for key in pairs(obj) do
+		table.insert(keys, key)
+	end
+	local index = 0
+	return {
+		next = function()
+			index = index + 1
+			local key = keys[index]
+			if key == nil then
+				return { done = true }
+			end
+			return { value = { key, obj[key] }, done = false }
+		end,
+	}
+end
+
 function TS.instanceof(obj, class)
 	-- custom Class.instanceof() check
 	if type(class) == "table" then
@@ -301,6 +319,76 @@ function TS.generator(callback)
 					value = value,
 					done = coroutine.status(co) == "dead",
 				}
+			end
+		end,
+	}
+end
+
+-- Explicit Resource Management (using statements)
+function TS.using(resource, body)
+	local success, result = pcall(body, resource)
+
+	-- Always call dispose, even if body threw
+	if resource ~= nil then
+		local disposeMethod = resource[Symbol.dispose]
+		if type(disposeMethod) == "function" then
+			disposeMethod(resource)
+		end
+	end
+
+	-- Re-throw error if body failed
+	if not success then
+		error(result, 2)
+	end
+
+	return result
+end
+
+function TS.disposableStack()
+	local stack = {}
+	local disposed = false
+
+	return {
+		use = function(self, resource)
+			if disposed then
+				error("DisposableStack has already been disposed", 2)
+			end
+			if resource ~= nil then
+				table.insert(stack, resource)
+			end
+			return resource
+		end,
+
+		defer = function(self, callback)
+			if disposed then
+				error("DisposableStack has already been disposed", 2)
+			end
+			-- Wrap callback as disposable
+			table.insert(stack, { [Symbol.dispose] = callback })
+		end,
+
+		[Symbol.dispose] = function(self)
+			if disposed then
+				return
+			end
+			disposed = true
+
+			local errors = {}
+			-- Dispose in reverse order (LIFO)
+			for i = #stack, 1, -1 do
+				local resource = stack[i]
+				local disposeMethod = resource[Symbol.dispose]
+				if type(disposeMethod) == "function" then
+					local success, err = pcall(disposeMethod, resource)
+					if not success then
+						table.insert(errors, err)
+					end
+				end
+			end
+
+			-- If any dispose threw, throw a SuppressedError
+			if #errors > 0 then
+				error(errors[1], 2)
 			end
 		end,
 	}

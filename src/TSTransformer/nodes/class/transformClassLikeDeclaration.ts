@@ -16,6 +16,7 @@ import { transformMethodDeclaration } from "TSTransformer/nodes/transformMethodD
 import { findConstructor } from "TSTransformer/util/findConstructor";
 import { getExtendsNode } from "TSTransformer/util/getExtendsNode";
 import { getKindName } from "TSTransformer/util/getKindName";
+import { hasSymbolProperty } from "TSTransformer/util/hasSymbolProperty";
 import { validateIdentifier } from "TSTransformer/util/validateIdentifier";
 import { validateMethodAssignment } from "TSTransformer/util/validateMethodAssignment";
 import ts from "typescript";
@@ -343,6 +344,20 @@ export function transformClassLikeDeclaration(state: TransformState, node: ts.Cl
 						}),
 					}),
 				),
+			}),
+		);
+	}
+
+	// Add Symbol.iterator support if class has [Symbol.iterator] method
+	const classInstanceType = state.typeChecker.getTypeAtLocation(node);
+	if (hasSymbolProperty(classInstanceType, "iterator")) {
+		// className.__iter = TS.objectIterator
+		luau.list.push(
+			statementsInner,
+			luau.create(luau.SyntaxKind.Assignment, {
+				left: luau.property(internalName, "__iter"),
+				operator: "=",
+				right: state.TS(node, "objectIterator"),
 			}),
 		);
 	}

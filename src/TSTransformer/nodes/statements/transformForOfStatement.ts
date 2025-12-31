@@ -22,8 +22,8 @@ import {
 	isGeneratorType,
 	isIterableFunctionLuaTupleType,
 	isIterableFunctionType,
-	isIterableType,
 	isMapType,
+	isPossiblyMacroIterationType,
 	isSetType,
 	isSharedTableType,
 	isStringType,
@@ -468,6 +468,20 @@ const buildIterableLoop: LoopBuilder = (state, statements, initializer, exp, sou
 	);
 };
 
+const buildDefaultLoop: LoopBuilder = (state, statements, initializer, exp, source) => {
+	const initializers = luau.list.make<luau.Statement>();
+	const id = transformForInitializer(state, initializer, initializers);
+	luau.list.pushList(statements, initializers);
+
+	return luau.list.make(
+		luau.create(luau.SyntaxKind.ForStatement, {
+			ids: luau.list.make(id),
+			expression: exp,
+			statements,
+		}),
+	);
+};
+
 function getLoopBuilder(state: TransformState, node: ts.Node, type: ts.Type): LoopBuilder {
 	if (isDefinitelyType(type, isArrayType(state))) {
 		return buildArrayLoop;
@@ -483,12 +497,12 @@ function getLoopBuilder(state: TransformState, node: ts.Node, type: ts.Type): Lo
 		return buildIterableFunctionLoop;
 	} else if (isDefinitelyType(type, isGeneratorType(state))) {
 		return buildGeneratorLoop;
-	} else if (type.isUnion()) {
+	} else if (isPossiblyMacroIterationType(state, type)) {
 		DiagnosticService.addDiagnostic(errors.noMacroUnion(node));
 		return () => luau.list.make();
+	} else {
+		return buildDefaultLoop;
 	}
-
-	return buildIterableLoop;
 }
 
 function findRangeMacro(state: TransformState, node: ts.ForOfStatement): ts.CallExpression | undefined {

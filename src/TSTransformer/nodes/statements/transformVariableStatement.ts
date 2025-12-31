@@ -167,15 +167,52 @@ export function transformVariableDeclaration(
 }
 
 export function isVarDeclaration(node: ts.VariableDeclarationList) {
-	return !(node.flags & ts.NodeFlags.Const) && !(node.flags & ts.NodeFlags.Let) && !(node.flags & ts.NodeFlags.Using);
+	// var = no flags (0), or flags that don't include const/let/using/awaitUsing
+	// Using = 4, AwaitUsing = 6, Const = 2, Let = 1
+	const flags = node.flags & (ts.NodeFlags.Const | ts.NodeFlags.Let | ts.NodeFlags.Using | ts.NodeFlags.AwaitUsing);
+	return flags === 0;
 }
 
 export function isUsingDeclaration(node: ts.VariableDeclarationList) {
-	return !!(node.flags & ts.NodeFlags.Using);
+	// Using = 4 exactly (not AwaitUsing which is 6)
+	const flags = node.flags & (ts.NodeFlags.Const | ts.NodeFlags.Let | ts.NodeFlags.Using | ts.NodeFlags.AwaitUsing);
+	return flags === ts.NodeFlags.Using;
 }
 
 export function isAwaitUsingDeclaration(node: ts.VariableDeclarationList) {
-	return !!(node.flags & ts.NodeFlags.AwaitUsing);
+	// AwaitUsing = 6 (Using + Const bits, but semantically different)
+	const flags = node.flags & (ts.NodeFlags.Const | ts.NodeFlags.Let | ts.NodeFlags.Using | ts.NodeFlags.AwaitUsing);
+	return flags === ts.NodeFlags.AwaitUsing;
+}
+
+function transformUsingDeclaration(state: TransformState, node: ts.VariableDeclarationList): luau.List<luau.Statement> {
+	const statements = luau.list.make<luau.Statement>();
+	const isAwaitUsing = isAwaitUsingDeclaration(node);
+
+	// await using is not yet supported (requires async dispose)
+	if (isAwaitUsing) {
+		DiagnosticService.addDiagnostic(errors.noUsingStatement(node));
+		// Still transform as regular declaration for now
+		for (const declaration of node.declarations) {
+			const [variableStatements, prereqs] = state.capture(() => transformVariableDeclaration(state, declaration));
+			luau.list.pushList(statements, prereqs);
+			luau.list.pushList(statements, variableStatements);
+		}
+		return statements;
+	}
+
+	// For now, using statements are not fully supported - show diagnostic
+	// Full implementation requires block-level transformation to wrap in try-finally
+	DiagnosticService.addDiagnostic(errors.noUsingStatement(node));
+
+	// Transform as regular const declarations
+	for (const declaration of node.declarations) {
+		const [variableStatements, prereqs] = state.capture(() => transformVariableDeclaration(state, declaration));
+		luau.list.pushList(statements, prereqs);
+		luau.list.pushList(statements, variableStatements);
+	}
+
+	return statements;
 }
 
 export function transformVariableDeclarationList(
@@ -186,13 +223,9 @@ export function transformVariableDeclarationList(
 		DiagnosticService.addDiagnostic(errors.noVar(node));
 	}
 
-	// using/await using declarations need special handling - they're transformed at block scope level
-	// to wrap in try-finally, so we just transform them as regular const declarations here
-	// The actual dispose logic is handled by the block scope transformer
+	// using/await using declarations need special handling
 	if (isUsingDeclaration(node) || isAwaitUsingDeclaration(node)) {
-		// For now, treat as const declarations
-		// TODO: Implement proper using statement transformation with try-finally blocks
-		DiagnosticService.addDiagnostic(errors.noUsingStatement(node));
+		return transformUsingDeclaration(state, node);
 	}
 
 	const statements = luau.list.make<luau.Statement>();

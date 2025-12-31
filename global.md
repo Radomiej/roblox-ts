@@ -44,3 +44,8 @@ When working with the upstream repository (`roblox-ts/roblox-ts`) to backport fi
 *   Follow the existing code style.
 *   Ensure all new code is covered by tests where applicable.
 *   When fixing bugs, try to verify the fix with a reproduction case in the `tests` directory.
+
+## Git Workflow
+*   **CRITICAL**: NEVER create git commits without explicit user request
+*   Always ask the user before committing changes
+*   Only commit when the user explicitly asks to commit
