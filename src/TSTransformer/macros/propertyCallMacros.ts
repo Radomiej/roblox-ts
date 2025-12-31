@@ -1,5 +1,4 @@
 import luau from "@roblox-ts/luau-ast";
-import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer/classes/TransformState";
 import { MacroList, PropertyCallMacro } from "TSTransformer/macros/types";
 import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
@@ -9,7 +8,7 @@ import { isDefinitelyType, isNumberType, isStringType } from "TSTransformer/util
 import { valueToIdStr } from "TSTransformer/util/valueToIdStr";
 import ts from "typescript";
 
-function makeMathMethod(operator: luau.BinaryOperator): PropertyCallMacro {
+function makeBinaryMacroMethod(operator: luau.BinaryOperator): PropertyCallMacro {
 	return (state, node, expression, args) => {
 		let rhs = args[0];
 		if (!luau.isSimple(rhs)) {
@@ -19,20 +18,17 @@ function makeMathMethod(operator: luau.BinaryOperator): PropertyCallMacro {
 	};
 }
 
-const OPERATOR_TO_NAME_MAP = new Map<luau.BinaryOperator, "add" | "sub" | "mul" | "div" | "idiv">([
-	["+", "add"],
-	["-", "sub"],
-	["*", "mul"],
-	["/", "div"],
-	["//", "idiv"],
-]);
+function makeUnaryMacroMethod(operator: luau.UnaryOperator): PropertyCallMacro {
+	return (state, node, expression) => {
+		return luau.unary(operator, expression);
+	};
+}
 
-function makeMathSet(...operators: Array<luau.BinaryOperator>) {
+function makeMathSet(...operators: Array<"+" | "-" | "*" | "/" | "//">) {
+	const operatorToName: Record<string, string> = { "+": "add", "-": "sub", "*": "mul", "/": "div", "//": "idiv" };
 	const result: { [index: string]: PropertyCallMacro } = {};
-	for (const operator of operators) {
-		const methodName = OPERATOR_TO_NAME_MAP.get(operator);
-		assert(methodName);
-		result[methodName] = makeMathMethod(operator);
+	for (const op of operators) {
+		result[operatorToName[op]] = makeBinaryMacroMethod(op);
 	}
 	return result;
 }
@@ -940,7 +936,22 @@ const PROMISE_METHODS: MacroList<PropertyCallMacro> = {
 };
 
 export const PROPERTY_CALL_MACROS: { [className: string]: MacroList<PropertyCallMacro> } = {
-	// math classes
+	// Generic math operator types (metamethod symbols)
+	Add: { add: makeBinaryMacroMethod("+") },
+	Sub: { sub: makeBinaryMacroMethod("-") },
+	Mul: { mul: makeBinaryMacroMethod("*") },
+	Div: { div: makeBinaryMacroMethod("/") },
+	IDiv: { idiv: makeBinaryMacroMethod("//") },
+	Mod: { mod: makeBinaryMacroMethod("%") },
+	Pow: { pow: makeBinaryMacroMethod("^") },
+	Concat: { concat: makeBinaryMacroMethod("..") },
+	Eq: { eq: makeBinaryMacroMethod("==") },
+	Lt: { lt: makeBinaryMacroMethod("<") },
+	Le: { le: makeBinaryMacroMethod("<=") },
+	Unm: { unm: makeUnaryMacroMethod("-") },
+	Len: { len: makeUnaryMacroMethod("#") },
+
+	// Roblox math classes (backward compatibility)
 	CFrame: makeMathSet("+", "-", "*"),
 	UDim: makeMathSet("+", "-"),
 	UDim2: makeMathSet("+", "-"),
