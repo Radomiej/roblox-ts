@@ -1,9 +1,3 @@
-interface SymbolConstructor {
-	readonly iterator: symbol;
-	readonly hasInstance: symbol;
-}
-declare const Symbol: SymbolConstructor;
-
 export = () => {
 	it("should support generators (Symbol.iterator)", () => {
 		function* makeIter() {

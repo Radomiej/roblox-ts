@@ -71,11 +71,8 @@ const setAccessor: BindingAccessor = (state, parentId, index, idStack, isOmitted
 	}
 	const callExp = luau.call(luau.globals.next, args);
 	if (isOmitted) {
-		state.prereq(
-			luau.create(luau.SyntaxKind.CallStatement, {
-				expression: callExp,
-			}),
-		);
+		const id = state.pushToVar(callExp, "value");
+		idStack.push(id);
 		return luau.none();
 	} else {
 		const id = state.pushToVar(callExp, "value");
