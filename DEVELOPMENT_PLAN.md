@@ -101,17 +101,17 @@ PRs that address specific bugs or correctness issues and appear ready for testin
         *   Objects: Auto-add `__iter` metamethod if object has `[Symbol.iterator]`
     *   **Compiler - Symbol.hasInstance**: Custom `instanceof` logic in `TS.instanceof`
     *   **Tests**: `symbol.spec.ts` passing (10 tests total)
-3.  **`using` statements (#2616)**: 🚧 **DETECTION IMPLEMENTED**
+3.  **`using` statements (#2616)**: ✅ **IMPLEMENTED**
     *   **Runtime**: `Symbol.dispose`, `Symbol.asyncDispose`, `TS.using()`, `TS.disposableStack()` in RuntimeLib.lua
     *   **Compiler**:
         *   `isUsingDeclaration()`, `isAwaitUsingDeclaration()` - correct NodeFlags detection (Using=4, AwaitUsing=6)
-        *   `transformUsingDeclaration()` - shows diagnostic, transforms as const for now
-        *   `noUsingStatement` diagnostic with helpful message
-    *   **Tests**: `noUsingStatement.ts`, `noUsingStatement.2.ts` diagnostic tests passing
-    *   **TODO for full implementation**:
-        *   Block-level transformation to wrap in try-finally
-        *   Reverse dispose order (LIFO)
-        *   Error handling with SuppressedError
+        *   `transformUsingDeclaration()` - transforms using declarations and tracks for disposal
+        *   `createDisposeStatements()` - generates LIFO dispose calls at end of scope
+        *   `transformStatementList` - detects using declarations and adds dispose at block end
+    *   **Tests**: `using.spec.ts` with 3 functional tests (dispose order, null handling)
+    *   **Limitations**:
+        *   `await using` not yet supported (shows diagnostic)
+        *   No try-finally wrapping yet (dispose called but errors not suppressed)
 4.  **CLI Tools**: Finalize `sourcemap` and `typegen` commands (#2811). - **PENDING**
 5.  **Update Runtime & Compiler to use modern Roblox APIs** ✅ **COMPLETED**
     *   Replaced deprecated `wait`, `spawn`, `delay` with `task` library in `Promise.lua` and `RuntimeLib.lua`.
