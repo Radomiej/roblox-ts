@@ -1,17 +1,19 @@
 import luau from "@roblox-ts/luau-ast";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { TransformState } from "TSTransformer/classes/TransformState";
 
 export function spreadDestructureSet(
 	state: TransformState,
+	prereqs: Prereqs,
 	parentId: luau.AnyIdentifier,
 	index: number,
 	idStack: Array<luau.AnyIdentifier>,
 ) {
-	const extracted = state.pushToVar(luau.set(idStack), "extracted");
-	const rest = state.pushToVar(luau.array(), "rest");
+	const extracted = prereqs.pushToVar(luau.set(idStack), "extracted");
+	const rest = prereqs.pushToVar(luau.array(), "rest");
 	const keyId = luau.tempId("k");
 
-	state.prereq(
+	prereqs.prereq(
 		luau.create(luau.SyntaxKind.ForStatement, {
 			ids: luau.list.make(keyId),
 			expression: parentId,

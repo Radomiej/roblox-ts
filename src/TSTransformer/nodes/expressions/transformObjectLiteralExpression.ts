@@ -20,7 +20,7 @@ function transformPropertyAssignment(
 	name: ts.PropertyName,
 	initializer: ts.Expression,
 ) {
-	let left = transformPropertyName(state, name);
+	let left = transformPropertyName(state, prereqs, name);
 	const right = transformExpression(state, prereqs, initializer);
 
 	if (!luau.list.isEmpty(prereqs.statements)) {

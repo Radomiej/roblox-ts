@@ -3,6 +3,7 @@ import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { transformIdentifierDefined } from "TSTransformer/nodes/expressions/transformIdentifier";
 import { transformPropertyName } from "TSTransformer/nodes/transformPropertyName";
@@ -39,13 +40,13 @@ export function transformEnumDeclaration(state: TransformState, node: ts.EnumDec
 
 	validateIdentifier(state, node.name);
 
-	const left = transformIdentifierDefined(state, node.name);
+	const left = transformIdentifierDefined(state, new Prereqs(), node.name);
 	const isHoisted = symbol !== undefined && state.isHoisted.get(symbol) === true;
 
 	if (node.members.every(member => !needsInverseEntry(state, member))) {
 		const right = luau.map(
 			node.members.map(member => [
-				state.pushToVarIfComplex(transformPropertyName(state, member.name)),
+				state.noPrereqs(() => transformPropertyName(state, new Prereqs(), member.name)),
 				luau.string(state.typeChecker.getConstantValue(member) as string),
 			]),
 		);
@@ -70,7 +71,7 @@ export function transformEnumDeclaration(state: TransformState, node: ts.EnumDec
 		);
 
 		for (const member of node.members) {
-			const name = transformPropertyName(state, member.name);
+			const name = state.noPrereqs(() => transformPropertyName(state, new Prereqs(), member.name));
 			const index = expressionMightMutate(
 				state,
 				name,

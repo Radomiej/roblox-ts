@@ -2,6 +2,7 @@ import luau from "@roblox-ts/luau-ast";
 import { errors } from "Shared/diagnostics";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { transformIdentifierDefined } from "TSTransformer/nodes/expressions/transformIdentifier";
 import { transformParameters } from "TSTransformer/nodes/transformParameters";
@@ -28,10 +29,16 @@ function transformPropertyInitializers(state: TransformState, node: ts.ClassLike
 		const initializer = member.initializer;
 		if (!initializer) continue;
 
-		const [index, indexPrereqs] = state.capture(() => transformPropertyName(state, name));
+		const [index, indexPrereqs] = state.capture(() => {
+			const prereqs = new Prereqs();
+			return transformPropertyName(state, prereqs, name);
+		});
 		luau.list.pushList(statements, indexPrereqs);
 
-		const [right, rightPrereqs] = state.capture(() => transformExpression(state, initializer));
+		const [right, rightPrereqs] = state.capture(() => {
+			const prereqs = new Prereqs();
+			return transformExpression(state, prereqs, initializer);
+		});
 		luau.list.pushList(statements, rightPrereqs);
 
 		luau.list.push(
@@ -102,7 +109,7 @@ export function transformClassConstructor(
 
 	for (const parameter of node.parameters) {
 		if (ts.isParameterPropertyDeclaration(parameter, parameter.parent)) {
-			const paramId = transformIdentifierDefined(state, parameter.name);
+			const paramId = transformIdentifierDefined(state, new Prereqs(), parameter.name);
 			luau.list.push(
 				statements,
 				luau.create(luau.SyntaxKind.Assignment, {

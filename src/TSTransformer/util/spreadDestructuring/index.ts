@@ -1,5 +1,6 @@
 import luau from "@roblox-ts/luau-ast";
 import { assert } from "Shared/util/assert";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { TransformState } from "TSTransformer/classes/TransformState";
 import { spreadDestructureArray } from "TSTransformer/util/spreadDestructuring/spreadDestructureArray";
 import { spreadDestructureGenerator } from "TSTransformer/util/spreadDestructuring/spreadDestructureGenerator";
@@ -20,8 +21,9 @@ export * from "TSTransformer/util/spreadDestructuring/spreadDestructureMap";
 export * from "TSTransformer/util/spreadDestructuring/spreadDestructureObject";
 export * from "TSTransformer/util/spreadDestructuring/spreadDestructureSet";
 
-type SpreadDestructor = (
+export type SpreadDestructor = (
 	state: TransformState,
+	prereqs: Prereqs,
 	parentId: luau.AnyIdentifier,
 	index: number,
 	idStack: Array<luau.AnyIdentifier>,

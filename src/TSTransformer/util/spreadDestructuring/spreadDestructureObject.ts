@@ -1,13 +1,15 @@
 import luau from "@roblox-ts/luau-ast";
 import { assert } from "Shared/util/assert";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { TransformState } from "TSTransformer/classes/TransformState";
 
 export function spreadDestructureObject(
 	state: TransformState,
+	prereqs: Prereqs,
 	parentId: luau.AnyIdentifier,
 	preSpreadNames: Array<luau.Expression>,
 ) {
-	const extracted = state.pushToVar(
+	const extracted = prereqs.pushToVar(
 		luau.set(
 			preSpreadNames.map(expression => {
 				if (luau.isPropertyAccessExpression(expression)) return luau.string(expression.name);
@@ -18,11 +20,11 @@ export function spreadDestructureObject(
 		),
 		"extracted",
 	);
-	const rest = state.pushToVar(luau.map(), "rest");
+	const rest = prereqs.pushToVar(luau.map(), "rest");
 	const keyId = luau.tempId("k");
 	const valueId = luau.tempId("v");
 
-	state.prereq(
+	prereqs.prereq(
 		luau.create(luau.SyntaxKind.ForStatement, {
 			ids: luau.list.make(keyId, valueId),
 			expression: parentId,

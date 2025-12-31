@@ -2,6 +2,7 @@ import luau from "@roblox-ts/luau-ast";
 import { errors } from "Shared/diagnostics";
 import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import {
 	transformCallExpressionInner,
 	transformElementCallExpressionInner,
@@ -163,16 +164,17 @@ export function flattenOptionalChain(state: TransformState, expression: ts.Expre
 	return { chain, expression };
 }
 
-function transformChainItem(state: TransformState, baseExpression: luau.Expression, item: ChainItem) {
+function transformChainItem(state: TransformState, prereqs: Prereqs, baseExpression: luau.Expression, item: ChainItem) {
 	if (item.kind === OptionalChainItemKind.PropertyAccess) {
-		return transformPropertyAccessExpressionInner(state, item.node, baseExpression, item.name);
+		return transformPropertyAccessExpressionInner(state, prereqs, item.node, baseExpression, item.name);
 	} else if (item.kind === OptionalChainItemKind.ElementAccess) {
-		return transformElementAccessExpressionInner(state, item.node, baseExpression, item.expression);
+		return transformElementAccessExpressionInner(state, prereqs, item.node, baseExpression, item.expression);
 	} else if (item.kind === OptionalChainItemKind.Call) {
-		return transformCallExpressionInner(state, item.node, baseExpression, item.args);
+		return transformCallExpressionInner(state, prereqs, item.node, baseExpression, item.args);
 	} else if (item.kind === OptionalChainItemKind.PropertyCall) {
 		return transformPropertyCallExpressionInner(
 			state,
+			prereqs,
 			item.node,
 			item.expression,
 			baseExpression,
@@ -182,6 +184,7 @@ function transformChainItem(state: TransformState, baseExpression: luau.Expressi
 	} else {
 		return transformElementCallExpressionInner(
 			state,
+			prereqs,
 			item.node,
 			item.expression,
 			baseExpression,
@@ -266,7 +269,7 @@ function transformOptionalChainInner(
 
 					baseExpression = luau.create(luau.SyntaxKind.ComputedIndexExpression, {
 						expression: convertToIndexableExpression(baseExpression),
-						index: addOneIfArrayType(state, expType, transformExpression(state, item.argumentExpression)),
+						index: addOneIfArrayType(state, expType, transformExpression(state, prereqs, item.argumentExpression)),
 					});
 				}
 			}
@@ -289,7 +292,7 @@ function transformOptionalChainInner(
 						}
 					}
 
-					const args = ensureTransformOrder(state, item.args);
+					const args = ensureTransformOrder(state, prereqs, item.args);
 					if (isMethodCall) {
 						if (isSuperCall) {
 							args.unshift(luau.globals.self);
@@ -299,7 +302,9 @@ function transformOptionalChainInner(
 					}
 					newExpression = wrapReturnIfLuaTuple(state, item.node, luau.call(tempId!, args));
 				} else {
-					newExpression = transformChainItem(state, tempId!, item);
+					const innerPrereqs = new Prereqs();
+					newExpression = transformChainItem(state, innerPrereqs, tempId!, item);
+					prereqs.prereqList(innerPrereqs.statements);
 				}
 				return transformOptionalChainInner(state, chain, newExpression, tempId, index + 1);
 			});
@@ -342,7 +347,7 @@ function transformOptionalChainInner(
 		return transformOptionalChainInner(
 			state,
 			chain,
-			transformChainItem(state, baseExpression, item),
+			transformChainItem(state, prereqs, baseExpression, item),
 			tempId,
 			index + 1,
 		);
@@ -351,8 +356,9 @@ function transformOptionalChainInner(
 
 export function transformOptionalChain(
 	state: TransformState,
+	prereqs: Prereqs,
 	node: ts.PropertyAccessExpression | ts.ElementAccessExpression | ts.CallExpression,
 ): luau.Expression {
 	const { chain, expression } = flattenOptionalChain(state, node);
-	return transformOptionalChainInner(state, chain, transformExpression(state, expression));
+	return transformOptionalChainInner(state, chain, transformExpression(state, prereqs, expression));
 }

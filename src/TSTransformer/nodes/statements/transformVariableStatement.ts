@@ -19,7 +19,12 @@ import { validateIdentifier } from "TSTransformer/util/validateIdentifier";
 import { wrapExpressionStatement } from "TSTransformer/util/wrapExpressionStatement";
 import ts from "typescript";
 
-export function transformVariable(state: TransformState, identifier: ts.Identifier, right?: luau.Expression) {
+export function transformVariable(
+	state: TransformState,
+	prereqs: Prereqs,
+	identifier: ts.Identifier,
+	right?: luau.Expression,
+) {
 	validateIdentifier(state, identifier);
 
 	const symbol = state.typeChecker.getSymbolAtLocation(identifier);
@@ -30,7 +35,7 @@ export function transformVariable(state: TransformState, identifier: ts.Identifi
 		const exportAccess = state.getModuleIdPropertyAccess(symbol);
 		if (exportAccess) {
 			if (right) {
-				state.prereq(
+				prereqs.prereq(
 					luau.create(luau.SyntaxKind.Assignment, {
 						left: exportAccess,
 						operator: "=",
@@ -42,7 +47,7 @@ export function transformVariable(state: TransformState, identifier: ts.Identifi
 		}
 	}
 
-	const left: luau.AnyIdentifier = transformIdentifierDefined(state, new Prereqs(), identifier);
+	const left: luau.AnyIdentifier = transformIdentifierDefined(state, prereqs, identifier);
 
 	checkVariableHoist(state, identifier, symbol);
 	if (state.isHoisted.get(symbol) === true) {
@@ -87,9 +92,13 @@ function transformOptimizedArrayBindingPattern(
 							state.prereq(initStatement);
 						}
 						if (ts.isArrayBindingPattern(element.name)) {
-							transformArrayBindingPattern(state, element.name, id);
+							const bindingPrereqs = new Prereqs();
+							transformArrayBindingPattern(state, bindingPrereqs, element.name, id);
+							state.prereqList(bindingPrereqs.statements);
 						} else {
-							transformObjectBindingPattern(state, element.name, id);
+							const bindingPrereqs = new Prereqs();
+							transformObjectBindingPattern(state, bindingPrereqs, element.name, id);
+							state.prereqList(bindingPrereqs.statements);
 						}
 					}
 				}
@@ -124,7 +133,11 @@ export function transformVariableDeclaration(
 	if (ts.isIdentifier(name)) {
 		luau.list.pushList(
 			statements,
-			state.capturePrereqs(() => transformVariable(state, name, value)),
+			state.capturePrereqs(() => {
+				const prereqs = new Prereqs();
+				transformVariable(state, prereqs, name, value);
+				return prereqs.statements;
+			}),
 		);
 	} else {
 		// in destructuring, rhs must be executed first
@@ -157,17 +170,31 @@ export function transformVariableDeclaration(
 			} else {
 				luau.list.pushList(
 					statements,
-					state.capturePrereqs(() =>
-						transformArrayBindingPattern(state, name, getTargetIdForBindingPattern(state, name, value!)),
-					),
+					state.capturePrereqs(() => {
+						const prereqs = new Prereqs();
+						transformArrayBindingPattern(
+							state,
+							prereqs,
+							name,
+							getTargetIdForBindingPattern(state, name, value!),
+						);
+						return prereqs.statements;
+					}),
 				);
 			}
 		} else {
 			luau.list.pushList(
 				statements,
-				state.capturePrereqs(() =>
-					transformObjectBindingPattern(state, name, getTargetIdForBindingPattern(state, name, value!)),
-				),
+				state.capturePrereqs(() => {
+					const prereqs = new Prereqs();
+					transformObjectBindingPattern(
+						state,
+						prereqs,
+						name,
+						getTargetIdForBindingPattern(state, name, value!),
+					);
+					return prereqs.statements;
+				}),
 			);
 		}
 	}

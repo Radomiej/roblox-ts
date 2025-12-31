@@ -3,6 +3,7 @@ import { RbxType } from "@roblox-ts/rojo-resolver";
 import { COMPILER_VERSION } from "Shared/constants";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformIdentifierDefined } from "TSTransformer/nodes/expressions/transformIdentifier";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
 import { getOriginalSymbolOfNode } from "TSTransformer/util/getOriginalSymbolOfNode";
@@ -16,7 +17,7 @@ function getExportPair(state: TransformState, exportSymbol: ts.Symbol): [name: s
 	if (declaration && ts.isExportSpecifier(declaration)) {
 		const exportName = declaration.propertyName ?? declaration.name;
 		if (ts.isIdentifier(exportName)) {
-			return [declaration.name.text, transformIdentifierDefined(state, exportName)];
+			return [declaration.name.text, transformIdentifierDefined(state, new Prereqs(), exportName)];
 		} else {
 			return [
 				declaration.name.text,

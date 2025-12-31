@@ -1,6 +1,7 @@
 import luau from "@roblox-ts/luau-ast";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformExpression } from "TSTransformer/nodes/expressions/transformExpression";
 import { transformPropertyName } from "TSTransformer/nodes/transformPropertyName";
 import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
@@ -163,7 +164,7 @@ function transformPropertyDecorators(
 ): luau.List<luau.Statement> {
 	const [initializers, finalizers] = transformMemberDecorators(state, member, expression => {
 		// typescript enforces that property keys are static, so they shouldn't have prereqs
-		const key = state.noPrereqs(() => transformPropertyName(state, member.name));
+		const key = state.noPrereqs(() => transformPropertyName(state, new Prereqs(), member.name));
 
 		// decorator(Class, "name")
 		return luau.list.make(
