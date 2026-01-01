@@ -91,3 +91,37 @@ Gdy skończysz testy i chcesz wrócić do stabilnej wersji:
 ```powershell
 npm unlink roblox-ts-dev
 ```
+
+## Testowanie lokalne @rbxts/compiler-types
+
+Jeśli musisz przetestować zmiany w definicjach typów (`@rbxts/compiler-types`) razem z kompilatorem:
+
+1.  **Sklonuj repozytorium types:**
+    ```powershell
+    git clone https://github.com/roblox-ts/compiler-types
+    cd compiler-types
+    ```
+
+2.  **Zarejestruj link:**
+    ```powershell
+    npm install
+    npm link
+    ```
+
+3.  **Podepnij w projekcie docelowym:**
+    W katalogu swojego projektu (np. `roblox-flowind-ui`):
+    ```powershell
+    npm link @rbxts/compiler-types
+    ```
+
+    _Teraz Twój projekt będzie używał lokalnych plików `.d.ts` z katalogu `compiler-types`._
+
+4.  **Weryfikacja:**
+    Jeśli dodałeś nowe typy (np. `Add<T>`), powinny być teraz widoczne dla kompilatora (jeśli używasz zlinkowanego `roblox-ts-dev`) oraz dla IDE (VS Code).
+
+5.  **Odpięcie:**
+    ```powershell
+    npm unlink @rbxts/compiler-types
+    # Aby przywrócić oryginalną wersję:
+    npm install --force
+    ```

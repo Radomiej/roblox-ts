@@ -21,6 +21,12 @@ export function transformObjectBindingPattern(
 ) {
 	validateNotAnyType(state, bindingPattern);
 	const patternType = state.getType(bindingPattern);
+	console.log(
+		"patternType:",
+		state.typeChecker.typeToString(patternType),
+		"flags:",
+		patternType.flags,
+	);
 	if (isDefinitelyType(patternType, isBigIntType)) {
 		DiagnosticService.addDiagnostic(errors.noBigIntDestructuring(bindingPattern));
 	}

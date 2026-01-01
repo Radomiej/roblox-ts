@@ -258,4 +258,9 @@ export const warnings = {
 	runtimeLibUsedInReplicatedFirst: warning(
 		"This statement would generate a call to the runtime library. The runtime library should not be used from ReplicatedFirst.",
 	),
+	missingMacroSymbol: (name: string) =>
+		warningText(
+			`MacroManager could not find symbol for ${name}!`,
+			"This may be due to outdated @rbxts/compiler-types.",
+		),
 };
