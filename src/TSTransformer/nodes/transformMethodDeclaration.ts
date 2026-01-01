@@ -32,7 +32,9 @@ export function transformMethodDeclaration(
 	let { statements, parameters, hasDotDotDot } = transformParameters(state, node);
 	luau.list.pushList(statements, transformStatementList(state, node.body, node.body.statements));
 
-	let name = transformPropertyName(state, new Prereqs(), node.name);
+	const namePrereqs = new Prereqs();
+	let name = transformPropertyName(state, namePrereqs, node.name);
+	luau.list.pushList(result, namePrereqs.statements);
 
 	if (ts.hasDecorators(node) || node.parameters.some(parameter => ts.hasDecorators(parameter))) {
 		if (!luau.isSimplePrimitive(name)) {

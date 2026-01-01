@@ -1,6 +1,7 @@
 import luau from "@roblox-ts/luau-ast";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer/classes/TransformState";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { createBitwiseCall, isBitwiseOperator } from "TSTransformer/util/bitwise";
 import { getKindName } from "TSTransformer/util/getKindName";
 import { isDefinitelyType, isStringType } from "TSTransformer/util/types";
@@ -46,6 +47,7 @@ export function createBinaryFromOperator(
 	operatorKind: ts.BinaryOperator,
 	right: luau.Expression,
 	rightType: ts.Type,
+	prereqs?: Prereqs,
 ): luau.Expression {
 	// simple
 	const operator = OPERATOR_MAP.get(operatorKind);
@@ -64,7 +66,11 @@ export function createBinaryFromOperator(
 	}
 
 	if (operatorKind === ts.SyntaxKind.CommaToken) {
-		state.prereqList(wrapExpressionStatement(left));
+		if (prereqs) {
+			prereqs.prereqList(wrapExpressionStatement(left));
+		} else {
+			state.prereqList(wrapExpressionStatement(left));
+		}
 		return right;
 	}
 

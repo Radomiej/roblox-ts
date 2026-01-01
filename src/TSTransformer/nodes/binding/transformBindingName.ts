@@ -25,7 +25,7 @@ export function transformBindingName(
 				} else {
 					transformObjectBindingPattern(state, prereqs, name, id);
 				}
-				return prereqs.statements;
+				state.prereqList(prereqs.statements);
 			}),
 		);
 	}

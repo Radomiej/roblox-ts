@@ -78,7 +78,7 @@ export function transformImportDeclaration(state: TransformState, node: ts.Impor
 						state.capturePrereqs(() => {
 							const prereqs = new Prereqs();
 							transformVariable(state, prereqs, importClauseName, luau.property(importExp.get(), "default"));
-							return prereqs.statements;
+							state.prereqList(prereqs.statements);
 						}),
 					);
 				} else {
@@ -87,7 +87,7 @@ export function transformImportDeclaration(state: TransformState, node: ts.Impor
 						state.capturePrereqs(() => {
 							const prereqs = new Prereqs();
 							transformVariable(state, prereqs, importClauseName, importExp.get());
-							return prereqs.statements;
+							state.prereqList(prereqs.statements);
 						}),
 					);
 				}
@@ -103,7 +103,7 @@ export function transformImportDeclaration(state: TransformState, node: ts.Impor
 					state.capturePrereqs(() => {
 						const prereqs = new Prereqs();
 						transformVariable(state, prereqs, importClauseNamedBindings.name, importExp.get());
-						return prereqs.statements;
+						state.prereqList(prereqs.statements);
 					}),
 				);
 			} else {
@@ -122,7 +122,7 @@ export function transformImportDeclaration(state: TransformState, node: ts.Impor
 									element.name,
 									luau.property(importExp.get(), (element.propertyName ?? element.name).text),
 								);
-								return prereqs.statements;
+								state.prereqList(prereqs.statements);
 							}),
 						);
 					}

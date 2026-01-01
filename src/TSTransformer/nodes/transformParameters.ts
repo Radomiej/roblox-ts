@@ -114,7 +114,7 @@ export function transformParameters(state: TransformState, node: ts.SignatureDec
 					state.capturePrereqs(() => {
 						const prereqs = new Prereqs();
 						transformArrayBindingPattern(state, prereqs, bindingPattern, paramId);
-						return prereqs.statements;
+						state.prereqList(prereqs.statements);
 					}),
 				);
 			} else {
@@ -123,7 +123,7 @@ export function transformParameters(state: TransformState, node: ts.SignatureDec
 					state.capturePrereqs(() => {
 						const prereqs = new Prereqs();
 						transformObjectBindingPattern(state, prereqs, bindingPattern, paramId);
-						return prereqs.statements;
+						state.prereqList(prereqs.statements);
 					}),
 				);
 			}

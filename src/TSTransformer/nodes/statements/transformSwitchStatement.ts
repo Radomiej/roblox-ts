@@ -15,9 +15,9 @@ function transformCaseClauseExpression(
 	canFallThroughTo: boolean,
 ) {
 	const caseValueId = luau.tempId("caseValue");
-	let [expression, prereqStatements] = state.capture(() =>
-		transformExpression(state, new Prereqs(), caseClauseExpression),
-	);
+	const prereqs = new Prereqs();
+	const expression = transformExpression(state, prereqs, caseClauseExpression);
+	let prereqStatements = prereqs.statements;
 
 	if (expressionMightMutate(state, expression, caseClauseExpression)) {
 		luau.list.push(

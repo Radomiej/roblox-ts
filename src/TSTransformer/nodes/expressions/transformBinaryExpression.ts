@@ -65,11 +65,9 @@ function transformOptimizedArrayAssignmentPattern(
 					ts.isElementAccessExpression(element) ||
 					ts.isPropertyAccessExpression(element)
 				) {
-					const [id, idPrereqs] = state.capture(() => {
-						const innerPrereqs = new Prereqs();
-						return transformWritableExpression(state, innerPrereqs, element, true);
-					});
-					luau.list.pushList(writesPrereqs, idPrereqs);
+					const innerPrereqs = new Prereqs();
+					const id = transformWritableExpression(state, innerPrereqs, element, true);
+					luau.list.pushList(writesPrereqs, innerPrereqs.statements);
 					luau.list.push(writes, id);
 					if (initializer) {
 						prereqs.prereq(transformInitializer(state, prereqs, id, initializer));
@@ -219,7 +217,7 @@ export function transformBinaryExpression(state: TransformState, prereqs: Prereq
 		);
 		if (operator !== undefined) {
 			return createAssignmentExpression(
-				state,
+				prereqs,
 				writable,
 				operator,
 				getAssignableValue(operator, value, valueType),
@@ -227,6 +225,7 @@ export function transformBinaryExpression(state: TransformState, prereqs: Prereq
 		} else {
 			return createCompoundAssignmentExpression(
 				state,
+				prereqs,
 				node,
 				writable,
 				writableType,
@@ -277,5 +276,5 @@ export function transformBinaryExpression(state: TransformState, prereqs: Prereq
 		}
 	}
 
-	return createBinaryFromOperator(state, node, left, leftType, operatorKind, right, rightType);
+	return createBinaryFromOperator(state, node, left, leftType, operatorKind, right, rightType, prereqs);
 }

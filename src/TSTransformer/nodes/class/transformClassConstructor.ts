@@ -29,17 +29,13 @@ function transformPropertyInitializers(state: TransformState, node: ts.ClassLike
 		const initializer = member.initializer;
 		if (!initializer) continue;
 
-		const [index, indexPrereqs] = state.capture(() => {
-			const prereqs = new Prereqs();
-			return transformPropertyName(state, prereqs, name);
-		});
-		luau.list.pushList(statements, indexPrereqs);
+		const indexPrereqs = new Prereqs();
+		const index = transformPropertyName(state, indexPrereqs, name);
+		luau.list.pushList(statements, indexPrereqs.statements);
 
-		const [right, rightPrereqs] = state.capture(() => {
-			const prereqs = new Prereqs();
-			return transformExpression(state, prereqs, initializer);
-		});
-		luau.list.pushList(statements, rightPrereqs);
+		const rightPrereqs = new Prereqs();
+		const right = transformExpression(state, rightPrereqs, initializer);
+		luau.list.pushList(statements, rightPrereqs.statements);
 
 		luau.list.push(
 			statements,

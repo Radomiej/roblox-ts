@@ -471,11 +471,13 @@ function transformForStatementOptimized(state: TransformState, node: ts.ForState
 
 	const id = transformIdentifierDefined(state, new Prereqs(), decName);
 
-	const [start, startPrereqs] = state.capture(() => transformExpression(state, new Prereqs(), decInit));
-	luau.list.pushList(result, startPrereqs);
+	const startPrereqs = new Prereqs();
+	const start = transformExpression(state, startPrereqs, decInit);
+	luau.list.pushList(result, startPrereqs.statements);
 
-	let [end, endPrereqs] = state.capture(() => transformExpression(state, new Prereqs(), condition.right));
-	luau.list.pushList(result, endPrereqs);
+	const endPrereqs = new Prereqs();
+	let end = transformExpression(state, endPrereqs, condition.right);
+	luau.list.pushList(result, endPrereqs.statements);
 
 	const step = luau.number(stepValue);
 	const statements = transformStatementList(state, statement, getStatements(statement));

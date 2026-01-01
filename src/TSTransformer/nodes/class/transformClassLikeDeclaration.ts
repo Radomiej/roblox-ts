@@ -87,12 +87,10 @@ function createBoilerplate(
 		);
 
 		if (extendsNode) {
-			const [extendsExp, extendsExpPrereqs] = state.capture(() => {
-				const prereqs = new Prereqs();
-				return transformExpression(state, prereqs, extendsNode.expression);
-			});
+			const extendsExpPrereqs = new Prereqs();
+			const extendsExp = transformExpression(state, extendsExpPrereqs, extendsNode.expression);
 			const superId = luau.id("super");
-			luau.list.pushList(statements, extendsExpPrereqs);
+			luau.list.pushList(statements, extendsExpPrereqs.statements);
 			luau.list.push(
 				statements,
 				luau.create(luau.SyntaxKind.VariableDeclaration, {

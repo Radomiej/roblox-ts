@@ -20,13 +20,20 @@ function transformPropertyAssignment(
 	name: ts.PropertyName,
 	initializer: ts.Expression,
 ) {
-	let left = transformPropertyName(state, prereqs, name);
-	const right = transformExpression(state, prereqs, initializer);
+	const leftPrereqs = new Prereqs();
+	let left = transformPropertyName(state, leftPrereqs, name);
+	const rightPrereqs = new Prereqs();
+	const right = transformExpression(state, rightPrereqs, initializer);
 
-	if (!luau.list.isEmpty(prereqs.statements)) {
+	if (!luau.list.isEmpty(leftPrereqs.statements) || !luau.list.isEmpty(rightPrereqs.statements)) {
 		disableMapInline(state, prereqs, ptr);
+	}
+
+	prereqs.prereqList(leftPrereqs.statements);
+	if (!luau.list.isEmpty(rightPrereqs.statements) && !luau.isSimplePrimitive(left)) {
 		left = prereqs.pushToVar(left, "left");
 	}
+	prereqs.prereqList(rightPrereqs.statements);
 
 	assignToMapPointer(state, prereqs, ptr, left, right);
 }

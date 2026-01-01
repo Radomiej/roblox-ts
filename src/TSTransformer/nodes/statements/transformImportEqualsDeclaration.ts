@@ -24,7 +24,7 @@ export function transformImportEqualsDeclaration(state: TransformState, node: ts
 				state.capturePrereqs(() => {
 					const prereqs = new Prereqs();
 					transformVariable(state, prereqs, node.name, importExp);
-					return prereqs.statements;
+					state.prereqList(prereqs.statements);
 				}),
 			);
 		}
@@ -45,7 +45,7 @@ export function transformImportEqualsDeclaration(state: TransformState, node: ts
 		return state.capturePrereqs(() => {
 			const prereqs = new Prereqs();
 			transformVariable(state, prereqs, node.name, transformEntityName(state, moduleReference));
-			return prereqs.statements;
+			state.prereqList(prereqs.statements);
 		});
 	}
 }

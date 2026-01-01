@@ -68,12 +68,9 @@ function transformMemberDecorators(
 
 	for (let i = 0; i < decorators.length; i++) {
 		const decorator = decorators[i];
-		let [expression, prereqs] = state.capture(() => {
-			const innerPrereqs = new Prereqs();
-			return transformExpression(state, innerPrereqs, decorator.expression);
-		});
-
-		luau.list.pushList(initializers, prereqs);
+		const prereqs = new Prereqs();
+		let expression = transformExpression(state, prereqs, decorator.expression);
+		luau.list.pushList(initializers, prereqs.statements);
 
 		const isLastDecorator = i === decorators.length - 1;
 

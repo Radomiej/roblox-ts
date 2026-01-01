@@ -16,11 +16,9 @@ export function transformDoStatement(state: TransformState, { expression, statem
 		conditionIsInvertedInLuau = false;
 	}
 
-	const [condition, conditionPrereqs] = state.capture(() => {
-		const prereqs = new Prereqs();
-		const exp = transformExpression(state, prereqs, expression);
-		return createTruthinessChecks(state, prereqs, exp, expression);
-	});
+	const conditionPrereqs = new Prereqs();
+	const exp = transformExpression(state, conditionPrereqs, expression);
+	const condition = createTruthinessChecks(state, conditionPrereqs, exp, expression);
 
 	const repeatStatements = luau.list.make<luau.Statement>();
 	luau.list.push(
@@ -29,7 +27,7 @@ export function transformDoStatement(state: TransformState, { expression, statem
 			statements,
 		}),
 	);
-	luau.list.pushList(repeatStatements, conditionPrereqs);
+	luau.list.pushList(repeatStatements, conditionPrereqs.statements);
 
 	return luau.list.make(
 		luau.create(luau.SyntaxKind.RepeatStatement, {

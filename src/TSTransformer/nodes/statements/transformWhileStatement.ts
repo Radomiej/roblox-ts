@@ -10,14 +10,12 @@ import ts from "typescript";
 export function transformWhileStatement(state: TransformState, node: ts.WhileStatement) {
 	const whileStatements = luau.list.make<luau.Statement>();
 
-	let [conditionExp, conditionPrereqs] = state.capture(() => {
-		const prereqs = new Prereqs();
-		const exp = transformExpression(state, prereqs, node.expression);
-		return createTruthinessChecks(state, prereqs, exp, node.expression);
-	});
+	const conditionPrereqs = new Prereqs();
+	const exp = transformExpression(state, conditionPrereqs, node.expression);
+	let conditionExp = createTruthinessChecks(state, conditionPrereqs, exp, node.expression);
 
-	if (!luau.list.isEmpty(conditionPrereqs)) {
-		luau.list.pushList(whileStatements, conditionPrereqs);
+	if (!luau.list.isEmpty(conditionPrereqs.statements)) {
+		luau.list.pushList(whileStatements, conditionPrereqs.statements);
 		luau.list.push(
 			whileStatements,
 			luau.create(luau.SyntaxKind.IfStatement, {

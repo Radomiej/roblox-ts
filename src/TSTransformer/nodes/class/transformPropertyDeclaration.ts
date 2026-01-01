@@ -25,14 +25,27 @@ export function transformPropertyDeclaration(
 		return luau.list.make<luau.Statement>();
 	}
 
-	return luau.list.make(
+	const statements = luau.list.make<luau.Statement>();
+
+	const indexPrereqs = new Prereqs();
+	const index = transformPropertyName(state, indexPrereqs, node.name);
+	luau.list.pushList(statements, indexPrereqs.statements);
+
+	const valuePrereqs = new Prereqs();
+	const value = transformExpression(state, valuePrereqs, node.initializer);
+	luau.list.pushList(statements, valuePrereqs.statements);
+
+	luau.list.push(
+		statements,
 		luau.create(luau.SyntaxKind.Assignment, {
 			left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
 				expression: name,
-				index: state.noPrereqs(() => transformPropertyName(state, new Prereqs(), node.name)),
+				index,
 			}),
 			operator: "=",
-			right: state.noPrereqs(() => transformExpression(state, new Prereqs(), node.initializer!)),
+			right: value,
 		}),
 	);
+
+	return statements;
 }

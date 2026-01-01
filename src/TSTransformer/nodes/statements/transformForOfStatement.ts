@@ -112,7 +112,7 @@ function transformForInitializer(
 			state.capturePrereqs(() => {
 				const prereqs = new Prereqs();
 				transformArrayAssignmentPattern(state, prereqs, initializer, parentId);
-				return prereqs.statements;
+				state.prereqList(prereqs.statements);
 			}),
 		);
 		return parentId;
@@ -123,7 +123,7 @@ function transformForInitializer(
 			state.capturePrereqs(() => {
 				const prereqs = new Prereqs();
 				transformObjectAssignmentPattern(state, prereqs, initializer, parentId);
-				return prereqs.statements;
+				state.prereqList(prereqs.statements);
 			}),
 		);
 		return parentId;
@@ -586,8 +586,9 @@ export function transformForOfStatement(state: TransformState, node: ts.ForOfSta
 
 	const result = luau.list.make<luau.Statement>();
 
-	const [exp, expPrereqs] = state.capture(() => transformExpression(state, new Prereqs(), node.expression));
-	luau.list.pushList(result, expPrereqs);
+	const expPrereqs = new Prereqs();
+	const exp = transformExpression(state, expPrereqs, node.expression);
+	luau.list.pushList(result, expPrereqs.statements);
 
 	const expType = state.getType(node.expression);
 	const statements = transformStatementList(state, node.statement, getStatements(node.statement));

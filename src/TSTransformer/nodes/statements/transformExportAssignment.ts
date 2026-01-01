@@ -13,28 +13,32 @@ function transformExportEquals(state: TransformState, node: ts.ExportAssignment)
 
 	const sourceFile = node.getSourceFile();
 	const finalStatement = sourceFile.statements[sourceFile.statements.length - 1];
+	const prereqs = new Prereqs();
+	const expression = transformExpression(state, prereqs, node.expression);
 	if (finalStatement === node) {
-		return luau.list.make<luau.Statement>(
-			luau.create(luau.SyntaxKind.ReturnStatement, { expression: transformExpression(state, new Prereqs(), node.expression) }),
-		);
+		const statements = luau.list.make<luau.Statement>();
+		luau.list.pushList(statements, prereqs.statements);
+		luau.list.push(statements, luau.create(luau.SyntaxKind.ReturnStatement, { expression }));
+		return statements;
 	} else {
-		return luau.list.make<luau.Statement>(
+		const statements = luau.list.make<luau.Statement>();
+		luau.list.pushList(statements, prereqs.statements);
+		luau.list.push(
+			statements,
 			luau.create(luau.SyntaxKind.VariableDeclaration, {
 				left: state.getModuleIdFromNode(node),
-				right: transformExpression(state, new Prereqs(), node.expression),
+				right: expression,
 			}),
 		);
+		return statements;
 	}
 }
 
 function transformExportDefault(state: TransformState, node: ts.ExportAssignment) {
 	const statements = luau.list.make<luau.Statement>();
-
-	const [expression, prereqs] = state.capture(() => {
-		const innerPrereqs = new Prereqs();
-		return transformExpression(state, innerPrereqs, node.expression);
-	});
-	luau.list.pushList(statements, prereqs);
+	const prereqs = new Prereqs();
+	const expression = transformExpression(state, prereqs, node.expression);
+	luau.list.pushList(statements, prereqs.statements);
 	luau.list.push(
 		statements,
 		luau.create(luau.SyntaxKind.VariableDeclaration, {
