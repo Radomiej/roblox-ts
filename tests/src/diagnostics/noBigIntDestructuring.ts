@@ -1,2 +1,2 @@
-declare const val: bigint;
-const {} = val;
+declare const val: bigint & { prop: string };
+const { prop } = val;

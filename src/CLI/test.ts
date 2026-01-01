@@ -42,6 +42,7 @@ describe("should compile tests project", () => {
 	const diagnosticsFolder = path.join(PACKAGE_ROOT, "tests", "src", "diagnostics");
 
 	const sourceFiles = getChangedSourceFiles(program);
+	console.log("Files to compile:", sourceFiles.map(sf => path.relative(process.cwd(), sf.fileName)).join(", "));
 
 	for (const sourceFile of sourceFiles) {
 		const fileName = path.relative(process.cwd(), sourceFile.fileName);
