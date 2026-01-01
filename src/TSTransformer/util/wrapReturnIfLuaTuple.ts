@@ -45,6 +45,11 @@ function shouldWrapLuaTuple(state: TransformState, node: ts.CallExpression, exp:
 		return false;
 	}
 
+	// `[foo(), true]`
+	if (ts.isArrayLiteralExpression(parent)) {
+		return true;
+	}
+
 	// `foo()[n]`
 	if (ts.isElementAccessExpression(parent) && parent.questionDotToken === undefined) {
 		return false;

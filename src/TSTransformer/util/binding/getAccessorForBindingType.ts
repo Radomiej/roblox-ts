@@ -1,8 +1,6 @@
 import luau from "@roblox-ts/luau-ast";
-import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
-import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
 import { Prereqs } from "TSTransformer/classes/Prereqs";
 import {
 	isArrayType,

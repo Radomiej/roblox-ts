@@ -32,9 +32,7 @@ export = () => {
 				return instance === "foo";
 			}
 		}
-		// @ts-ignore - TypeScript doesn't allow string instanceof class
-		expect("foo" instanceof Foo).to.equal(true);
-		// @ts-ignore
-		expect("bar" instanceof Foo).to.equal(false);
+		expect(("foo" as unknown) instanceof Foo).to.equal(true);
+		expect(("bar" as unknown) instanceof Foo).to.equal(false);
 	});
 };

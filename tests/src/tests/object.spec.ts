@@ -201,7 +201,7 @@ export = () => {
 		{
 			const k = { o: 1, b: 2 };
 			const o = {
-				// @ts-ignore
+				// @ts-expect-error property will be overwritten by spread
 				o: 3,
 				...k,
 				b: k.o++,
@@ -214,9 +214,9 @@ export = () => {
 		{
 			const k = { o: 1, b: 2 };
 			const o = {
-				// @ts-ignore
+				// @ts-expect-error property will be overwritten by spread
 				o: 3,
-				// @ts-ignore
+				// @ts-expect-error property will be overwritten by spread
 				b: k.o++,
 				...k,
 			};

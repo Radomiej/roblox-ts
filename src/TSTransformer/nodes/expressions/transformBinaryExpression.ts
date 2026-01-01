@@ -45,6 +45,8 @@ function transformOptimizedArrayAssignmentPattern(
 	const variables = luau.list.make<luau.TemporaryIdentifier>();
 	const writes = luau.list.make<luau.WritableExpression>();
 	const writesPrereqs = luau.list.make<luau.Statement>();
+	const innerStatements = luau.list.make<luau.Statement>();
+
 	const statements = state.capturePrereqs(() => {
 		for (let element of assignmentPattern.elements) {
 			if (ts.isOmittedExpression(element)) {
@@ -79,7 +81,9 @@ function transformOptimizedArrayAssignmentPattern(
 					if (initializer) {
 						prereqs.prereq(transformInitializer(state, prereqs, id, initializer));
 					}
-					transformArrayAssignmentPattern(state, prereqs, element, id);
+					const innerPrereqs = new Prereqs();
+					transformArrayAssignmentPattern(state, innerPrereqs, element, id);
+					luau.list.pushList(innerStatements, innerPrereqs.statements);
 				} else if (ts.isObjectLiteralExpression(element)) {
 					const id = luau.tempId("binding");
 					luau.list.push(variables, id);
@@ -87,7 +91,9 @@ function transformOptimizedArrayAssignmentPattern(
 					if (initializer) {
 						prereqs.prereq(transformInitializer(state, prereqs, id, initializer));
 					}
-					transformObjectAssignmentPattern(state, prereqs, element, id);
+					const innerPrereqs = new Prereqs();
+					transformObjectAssignmentPattern(state, innerPrereqs, element, id);
+					luau.list.pushList(innerStatements, innerPrereqs.statements);
 				} else {
 					assert(
 						false,
@@ -115,6 +121,7 @@ function transformOptimizedArrayAssignmentPattern(
 		}),
 	);
 	prereqs.prereqList(statements);
+	prereqs.prereqList(innerStatements);
 }
 
 export function transformBinaryExpression(state: TransformState, prereqs: Prereqs, node: ts.BinaryExpression) {
