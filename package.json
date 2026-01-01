@@ -12,6 +12,7 @@
 	},
 	"scripts": {
 		"prepublishOnly": "npm run build",
+		"prepare": "npm run build",
 		"build": "tspc -b",
 		"build-watch": "tspc -b -w",
 		"eslint": "eslint --cache --max-warnings 0",
