@@ -158,22 +158,12 @@ export function transformVariableDeclaration(
 				luau.list.pushList(statements, transformOptimizedArrayBindingPattern(state, name, value.members));
 			} else {
 				const prereqs = new Prereqs();
-				transformArrayBindingPattern(
-					state,
-					prereqs,
-					name,
-					getTargetIdForBindingPattern(state, name, value!),
-				);
+				transformArrayBindingPattern(state, prereqs, name, getTargetIdForBindingPattern(state, name, value!));
 				luau.list.pushList(statements, prereqs.statements);
 			}
 		} else {
 			const prereqs = new Prereqs();
-			transformObjectBindingPattern(
-				state,
-				prereqs,
-				name,
-				getTargetIdForBindingPattern(state, name, value!),
-			);
+			transformObjectBindingPattern(state, prereqs, name, getTargetIdForBindingPattern(state, name, value!));
 			luau.list.pushList(statements, prereqs.statements);
 		}
 	}

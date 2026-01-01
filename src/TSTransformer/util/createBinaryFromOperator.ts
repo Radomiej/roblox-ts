@@ -1,7 +1,7 @@
 import luau from "@roblox-ts/luau-ast";
 import { assert } from "Shared/util/assert";
-import { TransformState } from "TSTransformer/classes/TransformState";
 import { Prereqs } from "TSTransformer/classes/Prereqs";
+import { TransformState } from "TSTransformer/classes/TransformState";
 import { createBitwiseCall, isBitwiseOperator } from "TSTransformer/util/bitwise";
 import { getKindName } from "TSTransformer/util/getKindName";
 import { isDefinitelyType, isStringType } from "TSTransformer/util/types";

@@ -12,10 +12,10 @@ Only behavior unique to CLI environments should go here. Any behavior that is co
 
 **commands/build.ts** - the `build` command, this runs by default and can have the following flags:
 
--   `--project, -p` - Location of the tsconfig.json or folder containing the tsconfig.json _(defaults to ".")_
--   `--watch, -w` - Enable watch mode, recompiles files as they change. Creates a Watcher object. _(defaults to false)_
--   `--includePath, -i` - Path to where the runtime library files should be stored. _(defaults to "include")_
--   `--rojo` - Path to the Rojo configuration file. By default this will attempt to find a \*.project.json in your project folder.
+- `--project, -p` - Location of the tsconfig.json or folder containing the tsconfig.json _(defaults to ".")_
+- `--watch, -w` - Enable watch mode, recompiles files as they change. Creates a Watcher object. _(defaults to false)_
+- `--includePath, -i` - Path to where the runtime library files should be stored. _(defaults to "include")_
+- `--rojo` - Path to the Rojo configuration file. By default this will attempt to find a \*.project.json in your project folder.
 
 **modules/** - stores various classes related to running CLI processes
 

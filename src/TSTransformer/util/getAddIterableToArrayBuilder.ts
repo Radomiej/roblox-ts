@@ -74,7 +74,14 @@ const addArray: AddIterableToArrayBuilder = (
 	return result;
 };
 
-const addString: AddIterableToArrayBuilder = (state, prereqs, expression, arrayId, lengthId, amtElementsSinceUpdate) => {
+const addString: AddIterableToArrayBuilder = (
+	state,
+	prereqs,
+	expression,
+	arrayId,
+	lengthId,
+	amtElementsSinceUpdate,
+) => {
 	const result = luau.list.make<luau.Statement>();
 
 	if (amtElementsSinceUpdate > 0) {
@@ -305,7 +312,14 @@ const addIterableFunctionLuaTuple: AddIterableToArrayBuilder = (
 	return result;
 };
 
-const addGenerator: AddIterableToArrayBuilder = (state, prereqs, expression, arrayId, lengthId, amtElementsSinceUpdate) => {
+const addGenerator: AddIterableToArrayBuilder = (
+	state,
+	prereqs,
+	expression,
+	arrayId,
+	lengthId,
+	amtElementsSinceUpdate,
+) => {
 	const result = luau.list.make<luau.Statement>();
 
 	if (amtElementsSinceUpdate > 0) {
@@ -446,6 +460,15 @@ export function getAddIterableToArrayBuilder(
 	} else {
 		// Default to Symbol.iterator for unknown types
 		return (state, prereqs, expression, arrayId, lengthId, amtElementsSinceUpdate, shouldUpdateLengthId) =>
-			addIterable(state, prereqs, expression, arrayId, lengthId, amtElementsSinceUpdate, shouldUpdateLengthId, node);
+			addIterable(
+				state,
+				prereqs,
+				expression,
+				arrayId,
+				lengthId,
+				amtElementsSinceUpdate,
+				shouldUpdateLengthId,
+				node,
+			);
 	}
 }

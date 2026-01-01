@@ -1,7 +1,7 @@
 import luau from "@roblox-ts/luau-ast";
-import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { assert } from "Shared/util/assert";
 import { TransformState } from "TSTransformer";
+import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformJsxAttributes } from "TSTransformer/nodes/jsx/transformJsxAttributes";
 import { transformJsxChildren } from "TSTransformer/nodes/jsx/transformJsxChildren";
 import { transformJsxTagName } from "TSTransformer/nodes/jsx/transformJsxTagName";

@@ -654,7 +654,8 @@ const ARRAY_METHODS: MacroList<PropertyCallMacro> = {
 		return luau.call(luau.globals.table.insert, [expression, offset(args[0], 1), args[1]]);
 	},
 
-	remove: (state, prereqs, node, expression, args) => luau.call(luau.globals.table.remove, [expression, offset(args[0], 1)]),
+	remove: (state, prereqs, node, expression, args) =>
+		luau.call(luau.globals.table.remove, [expression, offset(args[0], 1)]),
 
 	unorderedRemove: (state, prereqs, node, expression, args) => {
 		const indexExp = prereqs.pushToVarIfComplex(offset(args[0], 1), "index");
@@ -731,7 +732,8 @@ const ARRAY_METHODS: MacroList<PropertyCallMacro> = {
 };
 
 const READONLY_SET_MAP_SHARED_METHODS: MacroList<PropertyCallMacro> = {
-	isEmpty: (state, prereqs, node, expression) => luau.binary(luau.call(luau.globals.next, [expression]), "==", luau.nil()),
+	isEmpty: (state, prereqs, node, expression) =>
+		luau.binary(luau.call(luau.globals.next, [expression]), "==", luau.nil()),
 
 	size: (state, prereqs, node, expression) => {
 		const sizeId = prereqs.pushToVar(luau.number(0), "size");

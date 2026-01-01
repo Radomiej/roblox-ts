@@ -271,7 +271,11 @@ function transformOptionalChainInner(
 
 					baseExpression = luau.create(luau.SyntaxKind.ComputedIndexExpression, {
 						expression: convertToIndexableExpression(baseExpression),
-						index: addOneIfArrayType(state, expType, transformExpression(state, prereqs, item.argumentExpression)),
+						index: addOneIfArrayType(
+							state,
+							expType,
+							transformExpression(state, prereqs, item.argumentExpression),
+						),
 					});
 				}
 			}

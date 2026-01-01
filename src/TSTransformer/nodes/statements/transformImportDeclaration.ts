@@ -77,7 +77,12 @@ export function transformImportDeclaration(state: TransformState, node: ts.Impor
 						statements,
 						state.capturePrereqs(() => {
 							const prereqs = new Prereqs();
-							transformVariable(state, prereqs, importClauseName, luau.property(importExp.get(), "default"));
+							transformVariable(
+								state,
+								prereqs,
+								importClauseName,
+								luau.property(importExp.get(), "default"),
+							);
 							state.prereqList(prereqs.statements);
 						}),
 					);

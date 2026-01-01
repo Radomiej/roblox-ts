@@ -38,7 +38,12 @@ export function transformObjectAssignmentPattern(
 			);
 			preSpreadNames.push(value);
 
-			const id = transformWritableExpression(state, prereqs, name, property.objectAssignmentInitializer !== undefined);
+			const id = transformWritableExpression(
+				state,
+				prereqs,
+				name,
+				property.objectAssignmentInitializer !== undefined,
+			);
 			prereqs.prereq(
 				luau.create(luau.SyntaxKind.Assignment, {
 					left: id,

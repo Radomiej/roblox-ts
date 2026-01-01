@@ -9,7 +9,11 @@ import { transformStatementList } from "TSTransformer/nodes/transformStatementLi
 import { wrapStatementsAsGenerator } from "TSTransformer/util/wrapStatementsAsGenerator";
 import ts from "typescript";
 
-export function transformFunctionExpression(state: TransformState, prereqs: Prereqs, node: ts.FunctionExpression | ts.ArrowFunction) {
+export function transformFunctionExpression(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.FunctionExpression | ts.ArrowFunction,
+) {
 	if (node.name) {
 		DiagnosticService.addDiagnostic(errors.noFunctionExpressionName(node.name));
 	}

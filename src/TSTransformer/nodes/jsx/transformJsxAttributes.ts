@@ -49,16 +49,19 @@ function createJsxAttributeLoop(
 	return statement;
 }
 
-function transformJsxAttribute(state: TransformState, prereqs: Prereqs, attribute: ts.JsxAttribute, attributesPtr: MapPointer) {
+function transformJsxAttribute(
+	state: TransformState,
+	prereqs: Prereqs,
+	attribute: ts.JsxAttribute,
+	attributesPtr: MapPointer,
+) {
 	let initializer: ts.Expression | undefined = attribute.initializer;
 	if (initializer && ts.isJsxExpression(initializer)) {
 		initializer = initializer.expression;
 	}
 
 	const initPrereqs = new Prereqs();
-	const init = initializer
-		? transformExpression(state, initPrereqs, initializer)
-		: luau.bool(true);
+	const init = initializer ? transformExpression(state, initPrereqs, initializer) : luau.bool(true);
 
 	if (!luau.list.isEmpty(initPrereqs.statements)) {
 		disableMapInline(state, prereqs, attributesPtr);
@@ -105,7 +108,9 @@ export function transformJsxAttributes(
 			}
 
 			disableMapInline(state, prereqs, attributesPtr);
-			prereqs.prereq(createJsxAttributeLoop(state, prereqs, attributesPtr.value, expression, attribute.expression));
+			prereqs.prereq(
+				createJsxAttributeLoop(state, prereqs, attributesPtr.value, expression, attribute.expression),
+			);
 		}
 	}
 }

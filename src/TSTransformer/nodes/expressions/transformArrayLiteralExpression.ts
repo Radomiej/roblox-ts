@@ -8,7 +8,11 @@ import { getAddIterableToArrayBuilder } from "TSTransformer/util/getAddIterableT
 import { createArrayPointer, disableArrayInline } from "TSTransformer/util/pointer";
 import ts from "typescript";
 
-export function transformArrayLiteralExpression(state: TransformState, prereqs: Prereqs, node: ts.ArrayLiteralExpression) {
+export function transformArrayLiteralExpression(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.ArrayLiteralExpression,
+) {
 	if (!node.elements.find(element => ts.isSpreadElement(element))) {
 		return luau.array(ensureTransformOrder(state, prereqs, node.elements));
 	}

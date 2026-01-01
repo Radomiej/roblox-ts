@@ -69,7 +69,11 @@ export function transformElementAccessExpressionInner(
 	});
 }
 
-export function transformElementAccessExpression(state: TransformState, prereqs: Prereqs, node: ts.ElementAccessExpression) {
+export function transformElementAccessExpression(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.ElementAccessExpression,
+) {
 	const constantValue = getConstantValueLiteral(state, node);
 	if (constantValue) {
 		return constantValue;

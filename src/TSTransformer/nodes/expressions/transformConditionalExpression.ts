@@ -7,7 +7,11 @@ import { isUsedAsStatement } from "TSTransformer/util/isUsedAsStatement";
 import { wrapExpressionStatement } from "TSTransformer/util/wrapExpressionStatement";
 import ts from "typescript";
 
-export function transformConditionalExpression(state: TransformState, prereqs: Prereqs, node: ts.ConditionalExpression) {
+export function transformConditionalExpression(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.ConditionalExpression,
+) {
 	const condition = transformExpression(state, prereqs, node.condition);
 	const whenTrue = transformExpression(state, prereqs, node.whenTrue);
 	const whenFalse = transformExpression(state, prereqs, node.whenFalse);

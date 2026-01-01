@@ -7,7 +7,7 @@ export function spreadDestructureArray(
 	prereqs: Prereqs,
 	parentId: luau.AnyIdentifier,
 	index: number,
-	idStack: Array<luau.AnyIdentifier>,
+	_idStack: Array<luau.AnyIdentifier>,
 ) {
 	return luau.call(luau.globals.table.move, [
 		parentId,

@@ -40,10 +40,17 @@ export default defineConfig(
 
 			// warn
 			"@typescript-eslint/no-unused-expressions": "warn",
-			"@typescript-eslint/no-unused-vars": "warn",
+			"@typescript-eslint/no-unused-vars": [
+				"warn",
+				{
+					argsIgnorePattern: "^_",
+					varsIgnorePattern: "^_",
+					caughtErrorsIgnorePattern: "^_",
+				},
+			],
 			"eslint-comments/disable-enable-pair": ["warn", { allowWholeFile: true }],
 			"eslint-comments/no-unused-disable": "warn",
-			"eslint-comments/require-description": "warn",
+			"eslint-comments/require-description": "off",
 			"no-console": "warn",
 			"no-undef-init": "warn",
 			"prefer-const": ["warn", { destructuring: "all" }],

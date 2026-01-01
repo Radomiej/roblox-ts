@@ -63,10 +63,7 @@ export function transformEnumDeclaration(state: TransformState, node: ts.EnumDec
 		luau.create(luau.SyntaxKind.Assignment, {
 			left,
 			operator: "=",
-			right: luau.call(luau.globals.setmetatable, [
-				luau.map(),
-				luau.map([[luau.strings.__index, inverseId]]),
-			]),
+			right: luau.call(luau.globals.setmetatable, [luau.map(), luau.map([[luau.strings.__index, inverseId]])]),
 		}),
 	);
 

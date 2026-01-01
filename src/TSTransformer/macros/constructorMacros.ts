@@ -7,24 +7,14 @@ import { transformExpression } from "TSTransformer/nodes/expressions/transformEx
 import { ensureTransformOrder } from "TSTransformer/util/ensureTransformOrder";
 import ts from "typescript";
 
-function wrapWeak(
-	state: TransformState,
-	prereqs: Prereqs,
-	node: ts.NewExpression,
-	macro: ConstructorMacro,
-) {
+function wrapWeak(state: TransformState, prereqs: Prereqs, node: ts.NewExpression, macro: ConstructorMacro) {
 	return luau.call(luau.globals.setmetatable, [
 		macro(state, prereqs, node),
 		luau.map([[luau.strings.__mode, luau.strings.k]]),
 	]);
 }
 
-function wrapUndefinedMapValue(
-	state: TransformState,
-	prereqs: Prereqs,
-	node: ts.Node,
-	value: luau.Expression,
-) {
+function wrapUndefinedMapValue(state: TransformState, prereqs: Prereqs, node: ts.Node, value: luau.Expression) {
 	if (!luau.isSimple(value)) {
 		value = prereqs.pushToVar(value, "value");
 	}

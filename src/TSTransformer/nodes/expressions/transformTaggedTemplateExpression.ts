@@ -6,7 +6,11 @@ import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexa
 import { ensureTransformOrder } from "TSTransformer/util/ensureTransformOrder";
 import ts from "typescript";
 
-export function transformTaggedTemplateExpression(state: TransformState, prereqs: Prereqs, node: ts.TaggedTemplateExpression) {
+export function transformTaggedTemplateExpression(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.TaggedTemplateExpression,
+) {
 	const tagExp = transformExpression(state, prereqs, node.tag);
 
 	if (ts.isTemplateExpression(node.template)) {

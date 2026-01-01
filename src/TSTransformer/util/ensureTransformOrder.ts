@@ -26,14 +26,21 @@ export function ensureTransformOrder(
 	state: TransformState,
 	prereqs: Prereqs,
 	nodes: ReadonlyArray<ts.Expression>,
-	transformer: (state: TransformState, prereqs: Prereqs, node: ts.Expression) => luau.Expression = transformExpression,
+	transformer: (
+		state: TransformState,
+		prereqs: Prereqs,
+		node: ts.Expression,
+	) => luau.Expression = transformExpression,
 ) {
 	const expressionInfoList = nodes.map(node => {
 		const nodePrereqs = new Prereqs();
 		const expression = transformer(state, nodePrereqs, node);
 		return [expression, nodePrereqs.statements] as [luau.Expression, luau.List<luau.Statement>];
 	});
-	const lastArgWithPrereqsIndex = findLastIndex(expressionInfoList, ([, prereqStatements]) => !luau.list.isEmpty(prereqStatements));
+	const lastArgWithPrereqsIndex = findLastIndex(
+		expressionInfoList,
+		([, prereqStatements]) => !luau.list.isEmpty(prereqStatements),
+	);
 	const result = new Array<luau.Expression>();
 	for (let i = 0; i < expressionInfoList.length; i++) {
 		const [expression, prereqStatements] = expressionInfoList[i];

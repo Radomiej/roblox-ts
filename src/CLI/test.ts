@@ -119,9 +119,29 @@ describe("should compile tests project", () => {
 		}
 
 		{
+			const luau = readLuau("tests", "binary.spec.luau");
+			const section = sliceBetween(
+				luau,
+				'it("should push WritableOperandNames"',
+				'it("should support unary expressions on indexed parenthesized expressions"',
+			);
+			expectSequence(section, ["local _original = numItems", "numItems += 1", "self.id = _original"]);
+		}
+
+		{
 			const luau = readLuau("tests", "object.spec.luau");
 			const section = sliceBetween(luau, 'it("should support computed members"', "end)\nend\n");
 			expectSequence(section, ["local _left = a", "a = 9", "_object[_left] ="]);
+		}
+
+		{
+			const luau = readLuau("tests", "object.spec.luau");
+			const section = sliceBetween(
+				luau,
+				'it("should support invalid Lua identifier members"',
+				'it("should support shorthand assignments"',
+			);
+			expectSequence(section, ['local _original = o["$v"]', 'o["$v"] += 1', "local _to = expect(_original).to"]);
 		}
 
 		{
@@ -185,7 +205,12 @@ describe("should compile tests project", () => {
 				'it("should support logical or assignment statement"',
 				'it("should support logical and assignment statement"',
 			);
-			expectSequence(orStatement, ["local _condition = x", "if not x then", "_condition = true", "x = _condition"]);
+			expectSequence(orStatement, [
+				"local _condition = x",
+				"if not x then",
+				"_condition = true",
+				"x = _condition",
+			]);
 
 			const andStatement = sliceBetween(
 				luau,
@@ -199,7 +224,12 @@ describe("should compile tests project", () => {
 				'it("should support logical null coalescing assignment expression"',
 				'it("should support logical or assignment expression"',
 			);
-			expectSequence(nullishExpr, ["if x == nil then", "x = true", "local _to = expect(x).to", "_to.equal(true)"]);
+			expectSequence(nullishExpr, [
+				"if x == nil then",
+				"x = true",
+				"local _to = expect(x).to",
+				"_to.equal(true)",
+			]);
 
 			const orExpr = sliceBetween(
 				luau,

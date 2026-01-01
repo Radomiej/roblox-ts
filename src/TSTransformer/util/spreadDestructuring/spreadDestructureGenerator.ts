@@ -6,8 +6,8 @@ export function spreadDestructureGenerator(
 	state: TransformState,
 	prereqs: Prereqs,
 	parentId: luau.AnyIdentifier,
-	index: number,
-	idStack: Array<luau.AnyIdentifier>,
+	_index: number,
+	_idStack: Array<luau.AnyIdentifier>,
 ) {
 	const restId = prereqs.pushToVar(luau.array(), "rest");
 

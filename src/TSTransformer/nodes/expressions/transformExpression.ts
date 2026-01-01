@@ -126,11 +126,7 @@ const TRANSFORMER_BY_KIND = createTransformerMap([
 	[ts.SyntaxKind.YieldExpression, transformYieldExpression],
 ]);
 
-export function transformExpression(
-	state: TransformState,
-	prereqs: Prereqs,
-	node: ts.Expression,
-): luau.Expression {
+export function transformExpression(state: TransformState, prereqs: Prereqs, node: ts.Expression): luau.Expression {
 	const transformer = TRANSFORMER_BY_KIND.get(node.kind);
 	if (transformer) {
 		return transformer(state, prereqs, node);

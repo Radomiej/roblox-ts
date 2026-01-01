@@ -35,7 +35,11 @@ export function transformPropertyAccessExpressionInner(
 	return luau.property(convertToIndexableExpression(expression), name);
 }
 
-export function transformPropertyAccessExpression(state: TransformState, prereqs: Prereqs, node: ts.PropertyAccessExpression) {
+export function transformPropertyAccessExpression(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.PropertyAccessExpression,
+) {
 	const constantValue = getConstantValueLiteral(state, node);
 	if (constantValue) {
 		return constantValue;

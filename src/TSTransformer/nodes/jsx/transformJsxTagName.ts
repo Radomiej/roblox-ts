@@ -20,7 +20,10 @@ function transformJsxTagNameExpression(state: TransformState, node: ts.JsxTagNam
 		if (ts.isPrivateIdentifier(node.name)) {
 			DiagnosticService.addDiagnostic(errors.noPrivateIdentifier(node.name));
 		}
-		return luau.property(convertToIndexableExpression(transformExpression(state, new Prereqs(), node.expression)), node.name.text);
+		return luau.property(
+			convertToIndexableExpression(transformExpression(state, new Prereqs(), node.expression)),
+			node.name.text,
+		);
 	} else if (ts.isJsxNamespacedName(node)) {
 		return luau.string(ts.getTextOfJsxNamespacedName(node));
 	} else {
