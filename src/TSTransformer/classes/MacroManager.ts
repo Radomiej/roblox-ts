@@ -120,7 +120,8 @@ export class MacroManager {
 		}
 
 		for (const [className, methods] of Object.entries(PROPERTY_CALL_MACROS)) {
-			const symbol = getGlobalSymbolByNameOrThrow(typeChecker, className, ts.SymbolFlags.All);
+			const symbol = typeChecker.resolveName(className, undefined, ts.SymbolFlags.All, false);
+			if (!symbol) continue;
 
 			const methodMap = new Map<string, ts.Symbol>();
 			for (const declaration of symbol.declarations ?? []) {

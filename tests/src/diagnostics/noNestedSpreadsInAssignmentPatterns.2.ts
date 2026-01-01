@@ -1,10 +1,10 @@
 let a, b, c, d;
 
 const obj = {
-    a: 1,
-    b: 2,
-    c: 3,
-    d: 4,
+	a: 1,
+	b: 2,
+	c: 3,
+	d: 4,
 };
 
-({ a, b, ...{c, d} } = obj);
+({ a, b, ...{ c, d } } = obj);

@@ -5,9 +5,11 @@ Ten dokument opisuje, jak testować zmiany w kompilatorze `roblox-ts` lokalnie o
 ## Wymagania
 
 Upewnij się, że masz zainstalowane zależności za pomocą `rokit`:
+
 ```powershell
 rokit install
 ```
+
 Zainstaluje to `rojo`, `lune` i inne potrzebne narzędzia.
 
 ## Budowanie i Testowanie Kompilatora
@@ -21,16 +23,19 @@ npm test
 Możesz też uruchamiać poszczególne etapy:
 
 1.  **Tylko kompilacja projektu:**
+
     ```powershell
     npm run build
     ```
 
 2.  **Testy jednostkowe (Jest):**
+
     ```powershell
     npm run test-compile
     ```
 
 3.  **Budowanie pliku testowego `.rbxl` (Rojo):**
+
     ```powershell
     npm run test-rojo
     ```
@@ -51,7 +56,8 @@ Uruchom poniższą komendę, aby zbudować kompilator i zarejestrować go jako p
 ```powershell
 npm run devlink
 ```
-*Uwaga: Musisz uruchomić `npm run build` za każdym razem, gdy wprowadzasz zmiany w kodzie źródłowym, aby zostały one odzwierciedlone w wersji dev.*
+
+_Uwaga: Musisz uruchomić `npm run build` za każdym razem, gdy wprowadzasz zmiany w kodzie źródłowym, aby zostały one odzwierciedlone w wersji dev._
 
 ### 2. Podpięcie w projekcie docelowym
 
@@ -66,6 +72,7 @@ npm link roblox-ts-dev
 Zamiast standardowej komendy `rbxtsc`, używaj `rbxtsc-dev`.
 
 Przykłady:
+
 ```powershell
 # Kompilacja jednorazowa
 rbxtsc-dev

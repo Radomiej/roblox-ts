@@ -489,7 +489,6 @@ const buildIterableLoop: LoopBuilder = (state, statements, initializer, exp, sou
 };
 
 const buildDefaultLoop: LoopBuilder = (state, statements, initializer, exp, _source) => {
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const initializers = luau.list.make<luau.Statement>();
 	const id = transformForInitializer(state, initializer, initializers);
 	luau.list.pushList(statements, initializers);

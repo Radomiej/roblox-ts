@@ -8,9 +8,9 @@ First, we'll need to setup the development build of **roblox-ts**.
 
 This guide assumes you have the following installed:
 
--   Git
--   NodeJS
--   NPM
+- Git
+- NodeJS
+- NPM
 
 We'll also assume you understand some basic terminal navigation commands (`cd`, `ls`/`dir`, etc.).
 
