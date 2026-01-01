@@ -125,3 +125,50 @@ Jeśli musisz przetestować zmiany w definicjach typów (`@rbxts/compiler-types`
     # Aby przywrócić oryginalną wersję:
     npm install --force
     ```
+
+## Generowanie typów wewnętrznych TypeScript (ts-expose-internals)
+
+Projekt używa lokalnie generowanych typów dla wewnętrznych API TypeScripta, ponieważ oficjalne paczki mogą nie być dostępne dla najnowszych wersji (np. 5.9.3).
+
+### Jak wygenerować typy:
+1. Upewnij się, że submoduły są zainicjalizowane:
+   ```powershell
+   git submodule update --init --recursive
+   ```
+2. Uruchom skrypt generujący:
+   ```powershell
+   npm run generate-internals
+   ```
+   Skrypt ten automatycznie:
+   - Pobierze odpowiednią wersję TypeScript (zdefiniowaną w `scripts/generate-internals.ts`).
+   - Zbuduje TypeScripta.
+   - Wygeneruje pliki `.d.ts` i naprawi je pod kątem kompatybilności.
+   - Zapisze wynik w `local-types/ts-expose-internals`.
+
+### Jak zaktualizować wersję TypeScript:
+1. Otwórz plik `scripts/generate-internals.ts`.
+2. Zmień wartość zmiennej `TS_VERSION` na nową wersję (np. `"5.10.0"`).
+3. Uruchom `npm run generate-internals`.
+4. Zaktualizuj również wersję TypeScript w `submodules/compiler-types/package.json` i `package.json` (jeśli wymagane).
+
+## Publikowanie wersji testowej (Beta/Snapshot) na npm
+
+Aby udostępnić wersję do testów dla innych użytkowników bez wpływania na główny tag `latest`:
+
+1.  **Zmień wersję w `package.json`** na wersję prerelease, np. `3.0.9-beta.1`.
+2.  **Zbuduj projekt:**
+    ```powershell
+    npm run build
+    ```
+3.  **Opublikuj z tagiem `beta`:**
+    ```powershell
+    npm publish --tag beta
+    ```
+    *Upewnij się, że jesteś zalogowany (`npm login`).*
+
+### Jak inni mogą zainstalować wersję testową:
+```powershell
+npm install roblox-ts@beta
+# lub konkretną wersję
+npm install roblox-ts@3.0.9-beta.1
+```
