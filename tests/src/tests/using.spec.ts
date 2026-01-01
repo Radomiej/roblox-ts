@@ -63,4 +63,25 @@ export = () => {
 		// Other resource should still be disposed
 		expect(otherDisposed).to.equal(true);
 	});
+
+	it("should dispose resources even if scope throws", () => {
+		let disposed = false;
+		function createResource(): Disposable {
+			return {
+				[Symbol.dispose]() {
+					disposed = true;
+				},
+			};
+		}
+
+		expect(() => {
+			{
+				using resource = createResource();
+				expect(disposed).to.equal(false);
+				throw "err";
+			}
+		}).to.throw();
+
+		expect(disposed).to.equal(true);
+	});
 };

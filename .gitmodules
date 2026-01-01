@@ -1,0 +1,6 @@
+[submodule "submodules/ts-expose-internals"]
+	path = submodules/ts-expose-internals
+	url = https://github.com/nonara/ts-expose-internals.git
+[submodule "submodules/compiler-types"]
+	path = submodules/compiler-types
+	url = https://github.com/Radomiej/compiler-types

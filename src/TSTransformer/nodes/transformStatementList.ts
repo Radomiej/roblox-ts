@@ -55,6 +55,53 @@ function createDisposeStatements(state: TransformState, usingDeclarations: Array
 	return disposeStatements;
 }
 
+function addFinalizersToIfStatement(node: luau.IfStatement, finalizers: luau.List<luau.Statement>) {
+	if (luau.list.isNonEmpty(node.statements)) {
+		addFinalizers(node.statements, node.statements.head, finalizers);
+	}
+	if (luau.list.isList(node.elseBody)) {
+		if (luau.list.isNonEmpty(node.elseBody)) {
+			addFinalizers(node.elseBody, node.elseBody.head, finalizers);
+		}
+	} else {
+		addFinalizersToIfStatement(node.elseBody, finalizers);
+	}
+}
+
+function addFinalizers(
+	list: luau.List<luau.Statement>,
+	node: luau.ListNode<luau.Statement>,
+	finalizers: luau.List<luau.Statement>,
+) {
+	const statement = node.value;
+	if (luau.isFinalStatement(statement)) {
+		const finalizersClone = luau.list.clone(finalizers);
+
+		luau.list.forEach(finalizersClone, node => (node.parent = statement.parent));
+
+		if (node.prev) {
+			node.prev.next = finalizersClone.head;
+		} else if (node === list.head) {
+			list.head = finalizersClone.head;
+		}
+
+		node.prev = finalizersClone.tail;
+		finalizersClone.tail!.next = node;
+	}
+
+	if (luau.isDoStatement(statement)) {
+		if (luau.list.isNonEmpty(statement.statements)) {
+			addFinalizers(statement.statements, statement.statements.head, finalizers);
+		}
+	} else if (luau.isIfStatement(statement)) {
+		addFinalizersToIfStatement(statement, finalizers);
+	}
+
+	if (node.next) {
+		addFinalizers(list, node.next, finalizers);
+	}
+}
+
 function getLastToken(parent: ts.Node | undefined, statements: ReadonlyArray<ts.Statement>) {
 	if (statements.length > 0) {
 		const lastStatement = statements[statements.length - 1];
@@ -158,9 +205,15 @@ export function transformStatementList(
 		}
 	}
 
-	// Add dispose statements for using declarations at end of scope (LIFO order)
 	if (usingDeclarations.length > 0 && parent) {
-		luau.list.pushList(result, createDisposeStatements(state, usingDeclarations, parent));
+		const disposeStatements = createDisposeStatements(state, usingDeclarations, parent);
+		if (result.head && luau.list.isNonEmpty(disposeStatements)) {
+			addFinalizers(result, result.head, disposeStatements);
+		}
+
+		if (!result.tail || !luau.isFinalStatement(result.tail.value)) {
+			luau.list.pushList(result, disposeStatements);
+		}
 	}
 
 	if (state.compilerOptions.removeComments !== true) {
