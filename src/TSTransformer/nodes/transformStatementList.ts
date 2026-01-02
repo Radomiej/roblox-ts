@@ -12,44 +12,89 @@ import ts from "typescript";
 
 /**
  * Creates dispose statements for using declarations in reverse order (LIFO)
+ * For await using, uses Symbol.asyncDispose with fallback to Symbol.dispose
  */
 function createDisposeStatements(state: TransformState, usingDeclarations: Array<UsingDeclarationInfo>, node: ts.Node) {
 	const disposeStatements = luau.list.make<luau.Statement>();
 
 	// Dispose in reverse order (LIFO) - last declared, first disposed
 	for (let i = usingDeclarations.length - 1; i >= 0; i--) {
-		const { id } = usingDeclarations[i];
+		const { id, isAwait } = usingDeclarations[i];
 		const symbolDispose = luau.property(state.TS(node, "Symbol"), "dispose");
+		const symbolAsyncDispose = luau.property(state.TS(node, "Symbol"), "asyncDispose");
 
-		// if resource ~= nil then
-		//     if resource[Symbol.dispose] then resource[Symbol.dispose](resource) end
-		// end
-		const disposeCheck = luau.create(luau.SyntaxKind.IfStatement, {
-			condition: luau.binary(id, "~=", luau.nil()),
-			statements: luau.list.make(
+		if (isAwait) {
+			// For await using: try asyncDispose first, then dispose as fallback
+			// local disposeMethod = resource[Symbol.asyncDispose] or resource[Symbol.dispose]
+			// if disposeMethod then disposeMethod(resource) end
+			const disposeMethodId = luau.tempId("disposeMethod");
+			const innerStatements = luau.list.make<luau.Statement>();
+			luau.list.push(
+				innerStatements,
+				luau.create(luau.SyntaxKind.VariableDeclaration, {
+					left: disposeMethodId,
+					right: luau.binary(
+						luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+							expression: id,
+							index: symbolAsyncDispose,
+						}),
+						"or",
+						luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+							expression: id,
+							index: symbolDispose,
+						}),
+					),
+				}),
+			);
+			luau.list.push(
+				innerStatements,
 				luau.create(luau.SyntaxKind.IfStatement, {
-					condition: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-						expression: id,
-						index: symbolDispose,
-					}),
+					condition: disposeMethodId,
 					statements: luau.list.make(
 						luau.create(luau.SyntaxKind.CallStatement, {
-							expression: luau.call(
-								luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-									expression: id,
-									index: symbolDispose,
-								}),
-								[id],
-							),
+							expression: luau.call(disposeMethodId, [id]),
 						}),
 					),
 					elseBody: luau.list.make(),
 				}),
-			),
-			elseBody: luau.list.make(),
-		});
-
-		luau.list.push(disposeStatements, disposeCheck);
+			);
+			const disposeCheck = luau.create(luau.SyntaxKind.IfStatement, {
+				condition: luau.binary(id, "~=", luau.nil()),
+				statements: innerStatements,
+				elseBody: luau.list.make(),
+			});
+			luau.list.push(disposeStatements, disposeCheck);
+		} else {
+			// For regular using: use Symbol.dispose
+			// if resource ~= nil then
+			//     if resource[Symbol.dispose] then resource[Symbol.dispose](resource) end
+			// end
+			const disposeCheck = luau.create(luau.SyntaxKind.IfStatement, {
+				condition: luau.binary(id, "~=", luau.nil()),
+				statements: luau.list.make(
+					luau.create(luau.SyntaxKind.IfStatement, {
+						condition: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+							expression: id,
+							index: symbolDispose,
+						}),
+						statements: luau.list.make(
+							luau.create(luau.SyntaxKind.CallStatement, {
+								expression: luau.call(
+									luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+										expression: id,
+										index: symbolDispose,
+									}),
+									[id],
+								),
+							}),
+						),
+						elseBody: luau.list.make(),
+					}),
+				),
+				elseBody: luau.list.make(),
+			});
+			luau.list.push(disposeStatements, disposeCheck);
+		}
 	}
 
 	return disposeStatements;

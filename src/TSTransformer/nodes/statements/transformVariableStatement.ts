@@ -203,19 +203,7 @@ function transformUsingDeclaration(
 	const statements = luau.list.make<luau.Statement>();
 	const isAwaitUsing = isAwaitUsingDeclaration(node);
 
-	// await using is not yet supported (requires async dispose)
-	if (isAwaitUsing) {
-		DiagnosticService.addDiagnostic(errors.noUsingStatement(node));
-		// Still transform as regular declaration for now
-		for (const declaration of node.declarations) {
-			const [variableStatements, prereqs] = state.capture(() => transformVariableDeclaration(state, declaration));
-			luau.list.pushList(statements, prereqs);
-			luau.list.pushList(statements, variableStatements);
-		}
-		return statements;
-	}
-
-	// Transform using declarations and track them for disposal
+	// Transform using/await using declarations and track them for disposal
 	for (const declaration of node.declarations) {
 		if (!declaration.initializer) continue;
 
