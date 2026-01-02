@@ -23,6 +23,12 @@
 - **New CLI Commands** ([#2811][2811])
   - `rbxtsc sourcemap` - Generate source map JSON for TS→Luau file mapping
   - `rbxtsc typegen` - Generate TypeScript declarations from Luau source files
+- **`@native` JSDoc Decorator** ([#2888][2888])
+  - Emit `--!native` Luau directive for functions marked with `/** @native */`
+  - Enables Luau Native Code Generation for 2-10x performance boost
+- **String Methods: startsWith/endsWith** ([#2863][2863])
+  - New string macros: `str.startsWith(search)` and `str.endsWith(search)`
+  - Compiles to efficient `string.sub` comparisons
 
 ### 🛠 Technical Improvements
 
@@ -78,6 +84,8 @@
 [2946]: https://github.com/roblox-ts/roblox-ts/pull/2946
 [2810]: https://github.com/roblox-ts/roblox-ts/issues/2810
 [2811]: https://github.com/roblox-ts/roblox-ts/issues/2811
+[2888]: https://github.com/roblox-ts/roblox-ts/issues/2888
+[2863]: https://github.com/roblox-ts/roblox-ts/issues/2863
 
 ## 3.0.0
 - TypeScript dependency updated to 5.5.3 ([#2617][2617], [#2648][2648], [#2716][2716], [#2736][2736])

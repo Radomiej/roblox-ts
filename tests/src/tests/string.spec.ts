@@ -139,4 +139,24 @@ export = () => {
 		const str2 = `A string with a " and ' ending in a ]] ]=`;
 		expect(str2.size()).to.equal(41);
 	});
+
+	// #2863: startsWith and endsWith support
+	it("should support startsWith", () => {
+		const text = "Hello, World!";
+		expect(text.startsWith("Hello")).to.equal(true);
+		expect(text.startsWith("World")).to.equal(false);
+		expect(text.startsWith("")).to.equal(true);
+		expect("".startsWith("")).to.equal(true);
+		expect("".startsWith("a")).to.equal(false);
+	});
+
+	it("should support endsWith", () => {
+		const text = "Hello, World!";
+		expect(text.endsWith("!")).to.equal(true);
+		expect(text.endsWith("World!")).to.equal(true);
+		expect(text.endsWith("Hello")).to.equal(false);
+		expect(text.endsWith("")).to.equal(true);
+		expect("".endsWith("")).to.equal(true);
+		expect("".endsWith("a")).to.equal(false);
+	});
 };

@@ -16,6 +16,6 @@
 		"@rbxts/types": "^1.0.884"
 	},
 	"devDependencies": {
-		"@rbxts/compiler-types": "file:../compiler-types-3.0.0.tgz"
+		"@rbxts/compiler-types": "file:../submodules/compiler-types"
 	}
 }
