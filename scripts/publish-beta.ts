@@ -82,10 +82,9 @@ async function main() {
 	try {
 		console.log("=== Publishing @radomiej/roblox-ts ecosystem ===");
 
-		// Read current version from package.json
-		console.log("\n--- Reading current version ---");
-		const mainPkg = await fs.readJSON(path.join(ROOT_DIR, "package.json"));
-		const baseVersion = mainPkg.version.replace(/-beta\.\d+$/, '');
+		// Base version for 3.1.0 release
+		console.log("\n--- Version Configuration ---");
+		const baseVersion = "3.1.0";
 		const newVersion = incrementBetaVersion(baseVersion);
 		console.log(`Next version will be: ${newVersion}`);
 
