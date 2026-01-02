@@ -1,12 +1,13 @@
 import luau from "@roblox-ts/luau-ast";
 import { errors } from "Shared/diagnostics";
 import { assert } from "Shared/util/assert";
-import { TransformState } from "TSTransformer";
 import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
 import { Prereqs } from "TSTransformer/classes/Prereqs";
+import { TransformState } from "TSTransformer/classes/TransformState";
 import { transformIdentifierDefined } from "TSTransformer/nodes/expressions/transformIdentifier";
 import { transformParameters } from "TSTransformer/nodes/transformParameters";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
+import { checkVariableHoist } from "TSTransformer/util/checkVariableHoist";
 import { validateIdentifier } from "TSTransformer/util/validateIdentifier";
 import { wrapStatementsAsGenerator } from "TSTransformer/util/wrapStatementsAsGenerator";
 import ts from "typescript";
@@ -30,6 +31,11 @@ export function transformFunctionDeclaration(state: TransformState, node: ts.Fun
 
 	if (node.name) {
 		validateIdentifier(state, node.name);
+		// #2847: Check if this function needs hoisting (e.g., declared after return)
+		const symbol = state.typeChecker.getSymbolAtLocation(node.name);
+		if (symbol) {
+			checkVariableHoist(state, node.name, symbol);
+		}
 	}
 
 	const name = node.name ? transformIdentifierDefined(state, new Prereqs(), node.name) : luau.id("default");

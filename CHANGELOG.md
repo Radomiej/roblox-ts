@@ -60,6 +60,8 @@
 - Fixed transformer diagnostic spans ([#2846][2846])
 - Fixed `$tuple()` with type assertion ([#2809][2809])
 - Fixed async function running code after cancellation ([#2957][2957])
+- Fixed LuaTuple wrap missing when indexed result is immediately called ([#2909][2909])
+- Fixed `string.endsWith("")` returning incorrect result for empty search string
 - Optimized bitwise operations with variable length arguments ([#2940][2940])
 - SharedTable iteration support ([#2938][2938])
 - Optimized binding pattern emit for variable creation ([#2946][2946])
@@ -88,6 +90,7 @@
 [2888]: https://github.com/roblox-ts/roblox-ts/issues/2888
 [2863]: https://github.com/roblox-ts/roblox-ts/issues/2863
 [2900]: https://github.com/roblox-ts/roblox-ts/issues/2900
+[2909]: https://github.com/roblox-ts/roblox-ts/issues/2909
 
 ## 3.0.0
 - TypeScript dependency updated to 5.5.3 ([#2617][2617], [#2648][2648], [#2716][2716], [#2736][2736])

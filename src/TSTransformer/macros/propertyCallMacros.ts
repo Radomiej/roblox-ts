@@ -1,6 +1,5 @@
 import luau from "@roblox-ts/luau-ast";
 import { Prereqs } from "TSTransformer/classes/Prereqs";
-import { TransformState } from "TSTransformer/classes/TransformState";
 import { MacroList, PropertyCallMacro } from "TSTransformer/macros/types";
 import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
 import { isUsedAsStatement } from "TSTransformer/util/isUsedAsStatement";
@@ -70,14 +69,22 @@ const STRING_CALLBACKS: MacroList<PropertyCallMacro> = {
 	},
 
 	endsWith: (state, prereqs, node, expression, args) => {
-		// string.sub(str, -#searchString) == searchString
+		// Handle empty string case: empty string always returns true
+		// For non-empty: string.sub(str, -#searchString) == searchString
 		const searchString = args[0];
 		const searchStringVar = prereqs.pushToVarIfComplex(searchString, "search");
 		const expressionVar = prereqs.pushToVarIfComplex(expression, "str");
+
+		// If searchString is empty, return true; otherwise check substring
+		// (#searchString == 0) or (string.sub(str, -#searchString) == searchString)
 		return luau.binary(
-			luau.call(luau.globals.string.sub, [expressionVar, luau.unary("-", luau.unary("#", searchStringVar))]),
-			"==",
-			searchStringVar,
+			luau.binary(luau.unary("#", searchStringVar), "==", luau.number(0)),
+			"or",
+			luau.binary(
+				luau.call(luau.globals.string.sub, [expressionVar, luau.unary("-", luau.unary("#", searchStringVar))]),
+				"==",
+				searchStringVar,
+			),
 		);
 	},
 };

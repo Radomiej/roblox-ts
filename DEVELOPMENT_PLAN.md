@@ -190,6 +190,7 @@ From Microsoft TypeScript breaking changes:
 5. **TS 5.2+: Using Declarations**
    - Test: `using` and `await using` for resource management
    - Status: ✅ Basic `using` implemented, `await using` shows diagnostic
+   - Note: `using` with `throw` works correctly via try-catch pattern
 
 6. **TS 5.4+: NoInfer Utility Type**
    - Test: `NoInfer<T>` type utility

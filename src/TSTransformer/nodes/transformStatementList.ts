@@ -119,7 +119,14 @@ function addFinalizers(
 	finalizers: luau.List<luau.Statement>,
 ) {
 	const statement = node.value;
-	if (luau.isFinalStatement(statement)) {
+	// Check if this is a final statement OR an error() call (throw statement)
+	const isErrorCall =
+		luau.isCallStatement(statement) &&
+		luau.isCall(statement.expression) &&
+		luau.isIdentifier(statement.expression.expression) &&
+		statement.expression.expression.name === "error";
+
+	if (luau.isFinalStatement(statement) || isErrorCall) {
 		const finalizersClone = luau.list.clone(finalizers);
 
 		luau.list.forEach(finalizersClone, node => (node.parent = statement.parent));
@@ -182,7 +189,8 @@ export function transformStatementList(
 	const usingDeclarations: Array<UsingDeclarationInfo> = [];
 
 	// iterate through each statement in the `statements` array
-	for (const statement of statements) {
+	for (let i = 0; i < statements.length; i++) {
+		const statement = statements[i];
 		// Special handling for using declarations
 		if (ts.isVariableStatement(statement)) {
 			const declList = statement.declarationList;
@@ -227,7 +235,20 @@ export function transformStatementList(
 		luau.list.pushList(result, transformedStatements);
 
 		const lastStatement = transformedStatements.tail?.value;
+		// #2847: Don't break on final statements - continue processing to collect hoisted declarations
+		// Hoisted function declarations after return will be emitted at the top of the block
 		if (lastStatement && luau.isFinalStatement(lastStatement)) {
+			// Continue processing remaining statements to collect hoists, but don't emit them to result
+			// Only the hoist declarations will be emitted
+			for (let j = i + 1; j < statements.length; j++) {
+				const futureStatement = statements[j];
+				// Only process function declarations for hoisting
+				if (ts.isFunctionDeclaration(futureStatement)) {
+					state.capture(() => transformStatement(state, futureStatement));
+					// The hoist declaration will be added by createHoistDeclaration
+					// We don't add the function body to result since it's after return
+				}
+			}
 			break;
 		}
 
@@ -252,6 +273,7 @@ export function transformStatementList(
 
 	if (usingDeclarations.length > 0 && parent) {
 		const disposeStatements = createDisposeStatements(state, usingDeclarations, parent);
+
 		if (result.head && luau.list.isNonEmpty(disposeStatements)) {
 			addFinalizers(result, result.head, disposeStatements);
 		}

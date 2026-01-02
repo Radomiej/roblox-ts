@@ -281,4 +281,13 @@ export = () => {
 		const sum = array.reduce(...args);
 		expect(sum).to.equal(25);
 	});
+
+	// #2888: @native JSDoc decorator
+	it("should support @native JSDoc decorator", () => {
+		/** @native */
+		function nativeFunction(x: number) {
+			return x * 2;
+		}
+		expect(nativeFunction(5)).to.equal(10);
+	});
 };
