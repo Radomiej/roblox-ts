@@ -57,9 +57,6 @@
 - SharedTable iteration support ([#2938][2938])
 - Optimized binding pattern emit for variable creation ([#2946][2946])
 
-### ⚠️ Known Limitations
-
-- Some Roblox runtime tests still failing (108/498) - related to array spread edge cases in complex destructuring patterns
 
 [2616]: https://github.com/roblox-ts/roblox-ts/issues/2616
 [1826]: https://github.com/roblox-ts/roblox-ts/issues/1826
