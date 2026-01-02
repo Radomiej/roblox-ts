@@ -166,12 +166,13 @@ describe("should compile tests project", () => {
 				'it("should support switch statements with fallthrough and context"',
 			);
 			expectSequence(context, [
+				"local _exp = n",
 				"local _original = x",
 				"x += 1",
-				"if n == _original then",
+				"if _exp == _original then",
 				"local _original_1 = x",
 				"x += 1",
-				"if n == _original_1 then",
+				"if _exp == _original_1 then",
 			]);
 
 			const fallthroughContext = sliceBetween(
@@ -180,14 +181,15 @@ describe("should compile tests project", () => {
 				'it("should support switch statements with preceding statements"',
 			);
 			expectSequence(fallthroughContext, [
+				"local _exp = n",
 				"local _fallthrough = false",
 				"local _original = x",
 				"x += 1",
-				"if n == _original then",
+				"if _exp == _original then",
 				"_fallthrough = true",
 				"local _original_1 = x",
 				"x += 1",
-				"_fallthrough = n == _original_1",
+				"_fallthrough = _exp == _original_1",
 			]);
 		}
 
