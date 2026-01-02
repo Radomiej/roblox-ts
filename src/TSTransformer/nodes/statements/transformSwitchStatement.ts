@@ -131,12 +131,9 @@ export function transformSwitchStatement(state: TransformState, node: ts.SwitchS
 	const exp = transformExpression(state, prereqs, node.expression);
 	state.prereqList(prereqs.statements);
 
-	// #2900: Check if any case expression might mutate the switch expression
-	// If so, we must capture the switch expression in a variable to preserve its value
-	const anyCaseMightMutate = node.caseBlock.clauses.some(
-		clause => ts.isCaseClause(clause) && expressionMightMutate(state, exp, clause.expression),
-	);
-	const expression = anyCaseMightMutate ? state.pushToVar(exp, "exp") : state.pushToVarIfComplex(exp, "exp");
+	// #2900: Always capture switch expression to ensure case expressions with side effects
+	// don't affect the switch value between comparisons
+	const expression = state.pushToVar(exp, "exp");
 	const fallThroughFlagId = luau.tempId("fallthrough");
 
 	let isFallThroughFlagNeeded = false;

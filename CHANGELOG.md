@@ -51,6 +51,7 @@
 
 ### 🐛 Bug Fixes
 
+- Fixed switch condition evaluated multiple times when case has side effects ([#2900][2900])
 - Fixed switch statement case expression double-evaluation ([#2917][2917])
 - Fixed `$range` adding `or 1` to negative steps ([#2970][2970])
 - Fixed transformer execution order ([#2991][2991])
@@ -86,6 +87,7 @@
 [2811]: https://github.com/roblox-ts/roblox-ts/issues/2811
 [2888]: https://github.com/roblox-ts/roblox-ts/issues/2888
 [2863]: https://github.com/roblox-ts/roblox-ts/issues/2863
+[2900]: https://github.com/roblox-ts/roblox-ts/issues/2900
 
 ## 3.0.0
 - TypeScript dependency updated to 5.5.3 ([#2617][2617], [#2648][2648], [#2716][2716], [#2736][2736])
