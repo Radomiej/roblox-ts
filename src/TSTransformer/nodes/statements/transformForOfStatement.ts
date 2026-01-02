@@ -503,6 +503,11 @@ const buildDefaultLoop: LoopBuilder = (state, statements, initializer, exp, _sou
 };
 
 function getLoopBuilder(state: TransformState, node: ts.Node, type: ts.Type): LoopBuilder {
+	// #2840: Handle 'any' type by using default loop (pairs) instead of crashing
+	if (type.flags & ts.TypeFlags.Any) {
+		return buildDefaultLoop;
+	}
+
 	if (isDefinitelyType(type, isArrayType(state))) {
 		return buildArrayLoop;
 	} else if (isDefinitelyType(type, isSetType(state))) {

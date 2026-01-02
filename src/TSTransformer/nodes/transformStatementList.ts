@@ -235,18 +235,68 @@ export function transformStatementList(
 		luau.list.pushList(result, transformedStatements);
 
 		const lastStatement = transformedStatements.tail?.value;
-		// #2847: Don't break on final statements - continue processing to collect hoisted declarations
-		// Hoisted function declarations after return will be emitted at the top of the block
+		// #2847: Process function declarations after return statements
+		// These need to be hoisted and emitted at the beginning of the block
 		if (lastStatement && luau.isFinalStatement(lastStatement)) {
-			// Continue processing remaining statements to collect hoists, but don't emit them to result
-			// Only the hoist declarations will be emitted
+			// Collect all function declarations after this final statement
+			const hoistedFunctions = luau.list.make<luau.Statement>();
 			for (let j = i + 1; j < statements.length; j++) {
 				const futureStatement = statements[j];
 				// Only process function declarations for hoisting
 				if (ts.isFunctionDeclaration(futureStatement)) {
-					state.capture(() => transformStatement(state, futureStatement));
-					// The hoist declaration will be added by createHoistDeclaration
-					// We don't add the function body to result since it's after return
+					const [funcStatements, funcPrereqs] = state.capture(() =>
+						transformStatement(state, futureStatement),
+					);
+					// Collect the function body to be inserted at the beginning
+					luau.list.pushList(hoistedFunctions, funcPrereqs);
+					luau.list.pushList(hoistedFunctions, funcStatements);
+				}
+			}
+
+			// Insert hoisted functions after hoist declarations (simplified approach)
+			// This ensures functions are defined before being called in most cases
+			// Note: Functions using local variables must have those variables hoisted
+			if (luau.list.isNonEmpty(hoistedFunctions)) {
+				let insertPoint = result.head;
+				let lastHoistDecl: luau.ListNode<luau.Statement> | undefined;
+
+				// Find the last hoist declaration (variable without initialization)
+				while (insertPoint) {
+					if (
+						luau.isVariableDeclaration(insertPoint.value) &&
+						insertPoint.value.right === undefined
+					) {
+						lastHoistDecl = insertPoint;
+						insertPoint = insertPoint.next;
+					} else {
+						// Stop at first non-hoist statement
+						break;
+					}
+				}
+
+				if (lastHoistDecl) {
+					// Insert after the last hoist declaration
+					const nextNode = lastHoistDecl.next;
+
+					lastHoistDecl.next = hoistedFunctions.head;
+					hoistedFunctions.head!.prev = lastHoistDecl;
+
+					hoistedFunctions.tail!.next = nextNode;
+					if (nextNode) {
+						nextNode.prev = hoistedFunctions.tail;
+					} else {
+						result.tail = hoistedFunctions.tail;
+					}
+				} else {
+					// No hoist declarations, insert at the very beginning
+					hoistedFunctions.tail!.next = result.head;
+					if (result.head) {
+						result.head.prev = hoistedFunctions.tail;
+					}
+					result.head = hoistedFunctions.head;
+					if (!result.tail) {
+						result.tail = hoistedFunctions.tail;
+					}
 				}
 			}
 			break;
