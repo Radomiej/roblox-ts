@@ -54,6 +54,7 @@ async function updatePackageVersion(packagePath: string, newVersion: string) {
 
 const ROOT_DIR = path.join(__dirname, "..");
 const COMPILER_TYPES_DIR = path.join(ROOT_DIR, "submodules/compiler-types");
+const TS_EXPOSE_INTERNALS_DIR = path.join(ROOT_DIR, "submodules/ts-expose-internals");
 
 function run(command: string, cwd: string, env: NodeJS.ProcessEnv = process.env) {
 	console.log(`> ${command}`);
@@ -79,17 +80,22 @@ function prompt(question: string, hidden: boolean = false): Promise<string> {
 
 async function main() {
 	try {
-		console.log("=== Publishing @radomiej/roblox-ts ecosystem (Beta) ===");
+		console.log("=== Publishing @radomiej/roblox-ts ecosystem ===");
 
-		// Auto-increment beta version
-		console.log("\n--- Checking and incrementing beta version ---");
-		const baseVersion = "3.0.9";
+		// Read current version from package.json
+		console.log("\n--- Reading current version ---");
+		const mainPkg = await fs.readJSON(path.join(ROOT_DIR, "package.json"));
+		const baseVersion = mainPkg.version.replace(/-beta\.\d+$/, '');
 		const newVersion = incrementBetaVersion(baseVersion);
 		console.log(`Next version will be: ${newVersion}`);
 
 		// Update package.json files
 		await updatePackageVersion(path.join(ROOT_DIR, "package.json"), newVersion);
 		await updatePackageVersion(path.join(COMPILER_TYPES_DIR, "package.json"), `${newVersion.replace('-beta', '-types.beta')}`);
+
+		// ts-expose-internals uses TypeScript version as base
+		const tsExposeVersion = `5.9.3-beta.${newVersion.split('-beta.')[1] || '1'}`;
+		await updatePackageVersion(path.join(TS_EXPOSE_INTERNALS_DIR, "package.json"), tsExposeVersion);
 
         console.log("Choose authentication method:");
         console.log("1. Use OTP (2FA code) with currently logged in user");
@@ -114,6 +120,7 @@ async function main() {
             // We will write this to the target directories temporarily
             await fs.writeFile(path.join(COMPILER_TYPES_DIR, ".npmrc"), npmrcContent);
             await fs.writeFile(path.join(ROOT_DIR, ".npmrc"), npmrcContent);
+            await fs.writeFile(path.join(TS_EXPOSE_INTERNALS_DIR, ".npmrc"), npmrcContent);
 
             console.log("Token configured in temporary .npmrc files.");
 
@@ -132,7 +139,15 @@ async function main() {
             }
         }
 
-		// 1. Publish compiler-types
+		// 1. Publish ts-expose-internals
+		console.log("\n--- Publishing ts-expose-internals ---");
+		try {
+            run(`npm publish --tag beta --access public${otpFlag}`, TS_EXPOSE_INTERNALS_DIR, authEnv);
+        } catch(e) {
+            console.error("Failed to publish ts-expose-internals. Continuing...");
+        }
+
+		// 2. Publish compiler-types
 		console.log("\n--- Publishing compiler-types ---");
 		try {
             run(`npm publish --tag beta --access public${otpFlag}`, COMPILER_TYPES_DIR, authEnv);
@@ -142,11 +157,11 @@ async function main() {
 
 		console.log("\n--- Publishing roblox-ts ---");
 
-		// 2. Build roblox-ts
+		// 3. Build roblox-ts
 		console.log("Building roblox-ts...");
 		run("npm run build", ROOT_DIR, authEnv);
 
-		// 3. Publish roblox-ts
+		// 4. Publish roblox-ts
 		console.log("Publishing roblox-ts...");
 		run(`npm publish --tag beta --access public${otpFlag}`, ROOT_DIR, authEnv);
 
@@ -156,6 +171,7 @@ async function main() {
         if (choice === "2") {
              await fs.remove(path.join(COMPILER_TYPES_DIR, ".npmrc"));
              await fs.remove(path.join(ROOT_DIR, ".npmrc"));
+             await fs.remove(path.join(TS_EXPOSE_INTERNALS_DIR, ".npmrc"));
              console.log("Temporary .npmrc files removed.");
         }
 
@@ -167,6 +183,7 @@ async function main() {
         try {
             await fs.remove(path.join(COMPILER_TYPES_DIR, ".npmrc"));
             await fs.remove(path.join(ROOT_DIR, ".npmrc"));
+            await fs.remove(path.join(TS_EXPOSE_INTERNALS_DIR, ".npmrc"));
         } catch {}
 
 		process.exit(1);
