@@ -138,7 +138,89 @@ PRs that address specific bugs or correctness issues and appear ready for testin
 2.  Update documentation/CHANGELOG.
 3.  Tag v3.1.0.
 
-## 5. Future Considerations (Backlog)
+## 5. Additional Test Cases & Edge Cases
+
+### From roblox-flowind-ui Project Analysis
+
+Based on git history and common issues:
+
+1. **Map.forEach Determinism Issues**
+   - Map iteration order must be deterministic for layout/rendering
+   - Test: Verify Map.forEach generates consistent iteration order in Lua
+   - Related: `fix: replace Map.forEach with deterministic iteration`
+
+2. **Array Size Method Compatibility**
+   - Roblox arrays use `array.size()` not `.size()` method
+   - Test: Ensure array length access compiles to `#array` or correct Luau idiom
+   - Related: `fix: use array.size() instead of size() method`
+
+3. **ZIndex/LayoutOrder Property Assignment**
+   - Frame properties like ZIndex must be set correctly
+   - Test: Property assignment to Roblox Instance properties
+   - Related: `fix: set frame ZIndex property to match LayoutOrder`
+
+4. **Conditional Prop Passing**
+   - Passing undefined props to components should be handled
+   - Test: `prop={condition ? value : undefined}` compilation
+   - Related: `fix: conditionally pass item prop to ItemSlot only when defined`
+
+5. **Memory Leaks from Defensive Copies**
+   - Layout engine state management and cleanup
+   - Test: Ensure proper cleanup in complex state management scenarios
+   - Related: `fix: prevent layout engine memory leaks by using defensive copies`
+
+### TypeScript 5.x Breaking Changes to Test
+
+From Microsoft TypeScript breaking changes:
+
+1. **TS 5.0+: Const Type Parameters**
+   - Test: `function foo<const T>(x: T)` inference behavior
+   - Status: ✅ Tested in playground
+
+2. **TS 5.0+: Decorators**
+   - Test: Both legacy and stage 3 decorators
+   - Status: ✅ Legacy decorators tested, stage 3 not supported yet
+
+3. **TS 5.0+: Enum Const Assertions**
+   - Test: `const enum` behavior and inlining
+
+4. **TS 5.1+: Undefined-Returning Functions**
+   - Test: Functions that return `undefined` vs `void`
+
+5. **TS 5.2+: Using Declarations**
+   - Test: `using` and `await using` for resource management
+   - Status: ✅ Basic `using` implemented, `await using` shows diagnostic
+
+6. **TS 5.4+: NoInfer Utility Type**
+   - Test: `NoInfer<T>` type utility
+   - Status: ✅ Added to compiler-types
+
+7. **TS 5.5+: Inferred Type Predicates**
+   - Test: Automatic type narrowing in control flow
+
+### Common roblox-ts Pain Points
+
+1. **RegEx Not Supported**
+   - Diagnostic should clearly state RegEx literals are unsupported
+   - Suggest string.match/string.gmatch alternatives
+
+2. **Promise Polyfill Version Conflicts**
+   - Upgraded to roblox-lua-promise 4.0.0 in 3.0.0
+   - Test: Promise.all, Promise.race with new version
+
+3. **JSX Fragment Key Handling**
+   - Top-level JSX no longer supports Key
+   - Test: `<><Component Key="key" /></>` wrapping requirement
+
+4. **typeRoots Validation**
+   - Relative to project folder, not package.json
+   - Test: Monorepo/workspace scenarios with hoisted node_modules
+
+5. **Luau vs Lua Output**
+   - Default `.luau` extension since 3.0.0
+   - Test: `--luau=false` flag for `.lua` output
+
+## 6. Future Considerations (Backlog)
 
 - **#2974 Proper compiler support for multiple projects (workspaces)**: Major architectural change, likely post-3.1.0.
 - **#2641 Unit test support**: Native testing integration.

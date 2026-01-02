@@ -20,10 +20,10 @@ function y(str: string) {
 	return kleur.yellow(str);
 }
 
-function validateTypeRoots(nodeModulesPath: string, typeRoots: Array<string>) {
-	const typesPath = path.resolve(nodeModulesPath);
+function validateTypeRoots(typeRoots: Array<string>) {
+	const rbxtsScope = path.join(NODE_MODULES, RBXTS_SCOPE);
 	for (const typeRoot of typeRoots) {
-		if (path.resolve(typeRoot) === typesPath) {
+		if (path.resolve(typeRoot).endsWith(rbxtsScope)) {
 			return true;
 		}
 	}
@@ -63,8 +63,8 @@ export function validateCompilerOptions(opts: ts.CompilerOptions, projectPath: s
 	}
 
 	const rbxtsModules = path.join(projectPath, NODE_MODULES, RBXTS_SCOPE);
-	if (opts.typeRoots === undefined || !validateTypeRoots(rbxtsModules, opts.typeRoots)) {
-		errors.push(`${y(`"typeRoots"`)} must contain ${y(rbxtsModules)}`);
+	if (opts.typeRoots === undefined || !validateTypeRoots(opts.typeRoots)) {
+		errors.push(`${y(`"typeRoots"`)} must contain a path to ${y(RBXTS_SCOPE)} (e.g. ${y(rbxtsModules)})`);
 	}
 
 	for (const typesLocation of opts.types ?? []) {

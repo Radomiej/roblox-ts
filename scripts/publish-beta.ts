@@ -4,6 +4,54 @@ import * as fs from "fs-extra";
 import * as path from "path";
 import * as readline from "readline";
 
+function getLatestBetaVersion(packageName: string): string | null {
+	try {
+		const output = execSync(`npm view ${packageName} versions --json`, { encoding: 'utf-8' });
+		const versions: string[] = JSON.parse(output);
+		const betaVersions = versions.filter(v => v.includes('-beta.'));
+		if (betaVersions.length === 0) return null;
+		return betaVersions[betaVersions.length - 1];
+	} catch (e) {
+		return null;
+	}
+}
+
+function incrementBetaVersion(baseVersion: string): string {
+	// baseVersion format: "3.0.9-beta.1"
+	const latestPublished = getLatestBetaVersion('@radomiej/roblox-ts');
+
+	if (!latestPublished) {
+		// No beta version published yet, start with .1
+		return `${baseVersion}-beta.1`;
+	}
+
+	// Extract beta number from published version
+	const match = latestPublished.match(/-beta\.(\d+)$/);
+	if (!match) {
+		return `${baseVersion}-beta.1`;
+	}
+
+	const currentBetaNum = parseInt(match[1], 10);
+	const nextBetaNum = currentBetaNum + 1;
+
+	// Extract base version (e.g., "3.0.9" from "3.0.9-beta.1")
+	const publishedBase = latestPublished.split('-beta.')[0];
+
+	// If base version changed, reset to .1, otherwise increment
+	if (publishedBase !== baseVersion) {
+		return `${baseVersion}-beta.1`;
+	}
+
+	return `${baseVersion}-beta.${nextBetaNum}`;
+}
+
+async function updatePackageVersion(packagePath: string, newVersion: string) {
+	const pkg = await fs.readJSON(packagePath);
+	pkg.version = newVersion;
+	await fs.writeJSON(packagePath, pkg, { spaces: '\t' });
+	console.log(`Updated ${path.basename(path.dirname(packagePath))} to version ${newVersion}`);
+}
+
 const ROOT_DIR = path.join(__dirname, "..");
 const COMPILER_TYPES_DIR = path.join(ROOT_DIR, "submodules/compiler-types");
 
@@ -33,6 +81,16 @@ async function main() {
 	try {
 		console.log("=== Publishing @radomiej/roblox-ts ecosystem (Beta) ===");
 
+		// Auto-increment beta version
+		console.log("\n--- Checking and incrementing beta version ---");
+		const baseVersion = "3.0.9";
+		const newVersion = incrementBetaVersion(baseVersion);
+		console.log(`Next version will be: ${newVersion}`);
+
+		// Update package.json files
+		await updatePackageVersion(path.join(ROOT_DIR, "package.json"), newVersion);
+		await updatePackageVersion(path.join(COMPILER_TYPES_DIR, "package.json"), `${newVersion.replace('-beta', '-types.beta')}`);
+
         console.log("Choose authentication method:");
         console.log("1. Use OTP (2FA code) with currently logged in user");
         console.log("2. Use an Authorization Token (CI/Automation token)");
@@ -58,6 +116,13 @@ async function main() {
             await fs.writeFile(path.join(ROOT_DIR, ".npmrc"), npmrcContent);
 
             console.log("Token configured in temporary .npmrc files.");
+
+            try {
+                console.log("Verifying token...");
+                run("npm whoami", ROOT_DIR, authEnv);
+            } catch (e) {
+                console.error("Warning: 'npm whoami' failed with this token. It might be invalid.");
+            }
         } else {
             const otp = await prompt("Enter NPM OTP code: ");
             if (otp) {

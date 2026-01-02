@@ -155,6 +155,28 @@ Projekt używa lokalnie generowanych typów dla wewnętrznych API TypeScripta, p
 
 Aby udostępnić wersję do testów dla innych użytkowników bez wpływania na główny tag `latest`:
 
+### Automatyczna publikacja (Zalecane)
+
+Dodano skrypt, który automatycznie publikuje zarówno `@radomiej/compiler-types`, jak i `@radomiej/roblox-ts` w wersji beta.
+
+1. Upewnij się, że jesteś zalogowany w npm:
+   ```powershell
+   npm login
+   ```
+2. Uruchom skrypt:
+   ```powershell
+   npm run publish-beta
+   ```
+
+Skrypt ten:
+- Opublikuje `submodules/compiler-types` jako `@radomiej/compiler-types`.
+- Zbuduje `roblox-ts`.
+- Opublikuje `roblox-ts` jako `@radomiej/roblox-ts`.
+
+### Ręczna publikacja (Alternatywa)
+
+Aby udostępnić wersję do testów dla innych użytkowników bez wpływania na główny tag `latest`:
+
 1.  **Zmień wersję w `package.json`** na wersję prerelease, np. `3.0.9-beta.1`.
 2.  **Zbuduj projekt:**
     ```powershell
