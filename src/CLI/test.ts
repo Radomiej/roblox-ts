@@ -244,3 +244,21 @@ describe("should compile tests project", () => {
 		}
 	});
 });
+
+describe("CLI commands", () => {
+	it("should have sourcemap command available", () => {
+		const sourcemapPath = path.join(PACKAGE_ROOT, "out", "CLI", "commands", "sourcemap.js");
+		expect(fs.existsSync(sourcemapPath)).toBe(true);
+	});
+
+	it("should have typegen command available", () => {
+		const typegenPath = path.join(PACKAGE_ROOT, "out", "CLI", "commands", "typegen.js");
+		expect(fs.existsSync(typegenPath)).toBe(true);
+	});
+
+	it("should have .luau include files", () => {
+		const includePath = path.join(PACKAGE_ROOT, "include");
+		expect(fs.existsSync(path.join(includePath, "Promise.luau"))).toBe(true);
+		expect(fs.existsSync(path.join(includePath, "RuntimeLib.luau"))).toBe(true);
+	});
+});
