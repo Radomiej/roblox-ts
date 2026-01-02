@@ -1,3 +1,87 @@
+## 3.1.0
+
+### 🚀 New Features
+
+- **TypeScript 5.9.3 Support** - Major upgrade bringing latest TS features and performance improvements
+- **`using` and `await using` Statements (TC39 Explicit Resource Management)** ([#2616][2616])
+  - Implements the Disposable pattern for automatic resource cleanup
+  - Supports both `using` (sync) and `await using` (async) declarations with LIFO dispose order
+  - New runtime: `Symbol.dispose`, `Symbol.asyncDispose`, `TS.using()`, `TS.asyncUsing()`, `TS.disposableStack()`
+- **Symbol.iterator Support** ([#1826][1826])
+  - Standard JS iteration protocols for custom iterables
+  - Classes/objects with `[Symbol.iterator]` auto-generate `__iter` metamethod
+  - Works with for-of loops and spread operators
+- **Symbol.hasInstance Support** ([#2537][2537])
+  - Custom `instanceof` behavior using `[Symbol.hasInstance]`
+  - Integrated into `TS.instanceof` runtime function
+- **Math Operator Macros** ([#2015][2015])
+  - Generic math operator types: `Add`, `Sub`, `Mul`, `Div`, `IDiv`, `Mod`, `Pow`, `Concat`, `Eq`, `Lt`, `Le`, `Unm`, `Len`
+  - Enables type-safe operator overloading for custom types
+  - Backward compatible with existing Roblox math types (Vector3, CFrame, etc.)
+- **LuaTuple Destructure Assignment** ([#1829][1829])
+  - Full support for `[a, b] = luaTupleReturningFunction()`
+- **New CLI Commands** ([#2811][2811])
+  - `rbxtsc sourcemap` - Generate source map JSON for TS→Luau file mapping
+  - `rbxtsc typegen` - Generate TypeScript declarations from Luau source files
+
+### 🛠 Technical Improvements
+
+- **Include Files Now Use .luau Extension** ([#2810][2810])
+  - `Promise.luau` and `RuntimeLib.luau` instead of `.lua`
+  - Better compatibility with Rojo and Luau LSP
+
+- **Prereqs System Refactoring** ([#2729][2729])
+  - New `Prereqs` class for managing prerequisite statements during AST transformation
+  - Improved evaluation order correctness for complex expressions
+  - TS-level regression tests for prereq ordering
+- **Modern Roblox API Usage**
+  - Replaced deprecated `wait`, `spawn`, `delay` with `task` library in runtime
+  - Replaced global `unpack` with `table.unpack`
+- **ESLint 9 + Consolidated Config** ([#2975][2975])
+  - Updated to ESLint 9, consolidated tsconfigs, added caching for CI
+- **Improved Diagnostics**
+  - Better error messages for BigInt, Iterable, and PrivateIdentifier destructuring
+  - Warning for missing macro symbols in `@rbxts/compiler-types`
+
+### 🐛 Bug Fixes
+
+- Fixed switch statement case expression double-evaluation ([#2917][2917])
+- Fixed `$range` adding `or 1` to negative steps ([#2970][2970])
+- Fixed transformer execution order ([#2991][2991])
+- Fixed ban on indexing `length` in tuples ([#2962][2962])
+- Fixed "return nil" generation for complexly named files ([#2887][2887])
+- Fixed transformer diagnostic spans ([#2846][2846])
+- Fixed `$tuple()` with type assertion ([#2809][2809])
+- Fixed async function running code after cancellation ([#2957][2957])
+- Optimized bitwise operations with variable length arguments ([#2940][2940])
+- SharedTable iteration support ([#2938][2938])
+- Optimized binding pattern emit for variable creation ([#2946][2946])
+
+### ⚠️ Known Limitations
+
+- Some Roblox runtime tests still failing (108/498) - related to array spread edge cases in complex destructuring patterns
+
+[2616]: https://github.com/roblox-ts/roblox-ts/issues/2616
+[1826]: https://github.com/roblox-ts/roblox-ts/issues/1826
+[2537]: https://github.com/roblox-ts/roblox-ts/issues/2537
+[2015]: https://github.com/roblox-ts/roblox-ts/issues/2015
+[1829]: https://github.com/roblox-ts/roblox-ts/issues/1829
+[2729]: https://github.com/roblox-ts/roblox-ts/issues/2729
+[2975]: https://github.com/roblox-ts/roblox-ts/pull/2975
+[2917]: https://github.com/roblox-ts/roblox-ts/pull/2917
+[2970]: https://github.com/roblox-ts/roblox-ts/pull/2970
+[2991]: https://github.com/roblox-ts/roblox-ts/pull/2991
+[2962]: https://github.com/roblox-ts/roblox-ts/pull/2962
+[2887]: https://github.com/roblox-ts/roblox-ts/pull/2887
+[2846]: https://github.com/roblox-ts/roblox-ts/pull/2846
+[2809]: https://github.com/roblox-ts/roblox-ts/pull/2809
+[2957]: https://github.com/roblox-ts/roblox-ts/pull/2957
+[2940]: https://github.com/roblox-ts/roblox-ts/pull/2940
+[2938]: https://github.com/roblox-ts/roblox-ts/pull/2938
+[2946]: https://github.com/roblox-ts/roblox-ts/pull/2946
+[2810]: https://github.com/roblox-ts/roblox-ts/issues/2810
+[2811]: https://github.com/roblox-ts/roblox-ts/issues/2811
+
 ## 3.0.0
 - TypeScript dependency updated to 5.5.3 ([#2617][2617], [#2648][2648], [#2716][2716], [#2736][2736])
 - Generic JSX ([#2404][2404])
