@@ -55,6 +55,31 @@ const STRING_CALLBACKS: MacroList<PropertyCallMacro> = {
 	split: makeStringCallback(luau.globals.string.split),
 	sub: makeStringCallback(luau.globals.string.sub),
 	upper: makeStringCallback(luau.globals.string.upper),
+
+	// #2863: startsWith and endsWith support
+	startsWith: (state, prereqs, node, expression, args) => {
+		// string.sub(str, 1, #searchString) == searchString
+		const searchString = args[0];
+		const searchStringVar = prereqs.pushToVarIfComplex(searchString, "search");
+		const expressionVar = prereqs.pushToVarIfComplex(expression, "str");
+		return luau.binary(
+			luau.call(luau.globals.string.sub, [expressionVar, luau.number(1), luau.unary("#", searchStringVar)]),
+			"==",
+			searchStringVar,
+		);
+	},
+
+	endsWith: (state, prereqs, node, expression, args) => {
+		// string.sub(str, -#searchString) == searchString
+		const searchString = args[0];
+		const searchStringVar = prereqs.pushToVarIfComplex(searchString, "search");
+		const expressionVar = prereqs.pushToVarIfComplex(expression, "str");
+		return luau.binary(
+			luau.call(luau.globals.string.sub, [expressionVar, luau.unary("-", luau.unary("#", searchStringVar))]),
+			"==",
+			searchStringVar,
+		);
+	},
 };
 
 function makeEveryOrSomeMethod(
