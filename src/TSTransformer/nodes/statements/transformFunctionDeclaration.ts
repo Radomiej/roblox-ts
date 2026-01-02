@@ -11,6 +11,14 @@ import { validateIdentifier } from "TSTransformer/util/validateIdentifier";
 import { wrapStatementsAsGenerator } from "TSTransformer/util/wrapStatementsAsGenerator";
 import ts from "typescript";
 
+/**
+ * Check if a function has the @native JSDoc tag
+ */
+function hasNativeTag(node: ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction): boolean {
+	const jsDocTags = ts.getJSDocTags(node);
+	return jsDocTags.some(tag => tag.tagName.text === "native");
+}
+
 export function transformFunctionDeclaration(state: TransformState, node: ts.FunctionDeclaration) {
 	if (!node.body) {
 		return luau.list.make<luau.Statement>();
@@ -25,6 +33,9 @@ export function transformFunctionDeclaration(state: TransformState, node: ts.Fun
 	}
 
 	const name = node.name ? transformIdentifierDefined(state, new Prereqs(), node.name) : luau.id("default");
+
+	// Check for @native JSDoc tag
+	const isNative = hasNativeTag(node);
 
 	let { statements, parameters, hasDotDotDot } = transformParameters(state, node);
 	luau.list.pushList(statements, transformStatementList(state, node.body, node.body.statements));
@@ -45,6 +56,13 @@ export function transformFunctionDeclaration(state: TransformState, node: ts.Fun
 		statements = wrapStatementsAsGenerator(state, node, statements);
 	}
 
+	const result = luau.list.make<luau.Statement>();
+
+	// Add --!native directive comment if @native JSDoc tag is present
+	if (isNative) {
+		luau.list.push(result, luau.comment("!native"));
+	}
+
 	if (isAsync) {
 		const right = luau.call(state.TS(node, "async"), [
 			luau.create(luau.SyntaxKind.FunctionExpression, {
@@ -54,14 +72,16 @@ export function transformFunctionDeclaration(state: TransformState, node: ts.Fun
 			}),
 		]);
 		if (localize) {
-			return luau.list.make(
+			luau.list.push(
+				result,
 				luau.create(luau.SyntaxKind.VariableDeclaration, {
 					left: name,
 					right,
 				}),
 			);
 		} else {
-			return luau.list.make(
+			luau.list.push(
+				result,
 				luau.create(luau.SyntaxKind.Assignment, {
 					left: name,
 					operator: "=",
@@ -70,8 +90,11 @@ export function transformFunctionDeclaration(state: TransformState, node: ts.Fun
 			);
 		}
 	} else {
-		return luau.list.make(
+		luau.list.push(
+			result,
 			luau.create(luau.SyntaxKind.FunctionDeclaration, { localize, name, statements, parameters, hasDotDotDot }),
 		);
 	}
+
+	return result;
 }
