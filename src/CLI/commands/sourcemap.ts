@@ -87,6 +87,7 @@ export = ts.identity<yargs.CommandModule<object, SourcemapFlags>>({
 				optimizedLoops: true,
 				allowCommentDirectives: false,
 				luau: true,
+				sourcemap: false,
 			});
 
 			const program = createProjectProgram(data);

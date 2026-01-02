@@ -232,28 +232,51 @@ export function compileFiles(
 					const ratio = tsLineCount / luaLineCount;
 
 					// Find key landmarks in Lua source for better accuracy
-					const functionMatches: Array<{ luaLine: number; name: string }> = [];
+					const functionMatches: Array<{ luaLine: number; name: string; type: string }> = [];
 					for (let i = 0; i < luaLines.length; i++) {
 						const line = luaLines[i];
 						// Match function declarations: "function name(" or "local function name("
 						const funcMatch = line.match(/(?:local\s+)?function\s+(\w+(?::\w+)?)\s*\(/);
 						if (funcMatch) {
-							functionMatches.push({ luaLine: i + 1, name: funcMatch[1] });
+							functionMatches.push({ luaLine: i + 1, name: funcMatch[1], type: "function" });
+						}
+						// Match comments that might indicate TS line numbers
+						const commentMatch = line.match(/--\s*(.+)\.ts:(\d+)/);
+						if (commentMatch) {
+							const _tsLineFromComment = parseInt(commentMatch[2], 10);
+							functionMatches.push({ luaLine: i + 1, name: `__comment_${i}`, type: "comment" });
+						}
+						// Match variable declarations as additional landmarks
+						const varMatch = line.match(/local\s+(\w+)\s*=/);
+						if (varMatch && !line.includes("function")) {
+							functionMatches.push({ luaLine: i + 1, name: varMatch[1], type: "variable" });
 						}
 					}
 
 					// Try to match Lua functions to TS functions for accurate mapping
-					const tsFunctions: Array<{ line: number; name: string }> = [];
+					const tsFunctions: Array<{ line: number; name: string; type: string }> = [];
 					ts.forEachChild(sourceFile, function visit(node) {
 						if (ts.isFunctionDeclaration(node) && node.name) {
 							const pos = sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							tsFunctions.push({ line: pos.line + 1, name: node.name.text });
+							tsFunctions.push({ line: pos.line + 1, name: node.name.text, type: "function" });
 						} else if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
 							const pos = sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							tsFunctions.push({ line: pos.line + 1, name: node.name.text });
+							tsFunctions.push({ line: pos.line + 1, name: node.name.text, type: "method" });
 						} else if (ts.isClassDeclaration(node) && node.name) {
 							const pos = sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							tsFunctions.push({ line: pos.line + 1, name: node.name.text });
+							tsFunctions.push({ line: pos.line + 1, name: node.name.text, type: "class" });
+						} else if (ts.isVariableStatement(node)) {
+							// Track variable declarations
+							node.declarationList.declarations.forEach(decl => {
+								if (ts.isIdentifier(decl.name)) {
+									const pos = sourceFile.getLineAndCharacterOfPosition(decl.name.getStart());
+									tsFunctions.push({ line: pos.line + 1, name: decl.name.text, type: "variable" });
+								}
+							});
+						} else if (ts.isExpressionStatement(node)) {
+							// Track expression statements (like obj.method() calls)
+							const pos = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+							tsFunctions.push({ line: pos.line + 1, name: `__expr_${pos.line}`, type: "expression" });
 						}
 						ts.forEachChild(node, visit);
 					});
@@ -261,16 +284,47 @@ export function compileFiles(
 					// Build mapping with landmarks for better accuracy
 					const landmarks: Array<{ luaLine: number; tsLine: number }> = [];
 
-					// Match functions by name
+					// Match landmarks by name and type with priority
 					for (const luaFunc of functionMatches) {
-						const tsFunc = tsFunctions.find(
+						// Prioritize exact matches with same type
+						let tsFunc = tsFunctions.find(
 							f =>
-								luaFunc.name === f.name ||
-								luaFunc.name.endsWith(":" + f.name) ||
-								luaFunc.name === f.name.replace(/^_+/, ""),
+								f.type === luaFunc.type &&
+								(luaFunc.name === f.name ||
+									luaFunc.name.endsWith(":" + f.name) ||
+									luaFunc.name === f.name.replace(/^_+/, "")),
 						);
+
+						// Fallback to any type match
+						if (!tsFunc) {
+							tsFunc = tsFunctions.find(
+								f =>
+									luaFunc.name === f.name ||
+									luaFunc.name.endsWith(":" + f.name) ||
+									luaFunc.name === f.name.replace(/^_+/, ""),
+							);
+						}
+
 						if (tsFunc) {
 							landmarks.push({ luaLine: luaFunc.luaLine, tsLine: tsFunc.line });
+						}
+					}
+
+					// Add landmarks for print/error statements (common patterns)
+					for (let i = 0; i < luaLines.length; i++) {
+						const line = luaLines[i];
+						if (line.includes('print("---') || line.includes("error(")) {
+							// Find corresponding TS line with similar pattern
+							const tsSourceLines = sourceFile.text.split("\n");
+							for (let j = 0; j < tsSourceLines.length; j++) {
+								if (
+									(line.includes('print("---') && tsSourceLines[j].includes('print("---')) ||
+									(line.includes("error(") && tsSourceLines[j].includes("error("))
+								) {
+									landmarks.push({ luaLine: i + 1, tsLine: j + 1 });
+									break;
+								}
+							}
 						}
 					}
 

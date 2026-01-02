@@ -107,7 +107,12 @@ local registeredLibraries = {}
 
 function TS.import(context, module, ...)
 	for i = 1, select("#", ...) do
-		module = module:WaitForChild((select(i, ...)))
+		local childName = select(i, ...)
+		local child = module:WaitForChild(childName, 10)
+		if not child then
+			error(OUTPUT_PREFIX .. "Failed to import! Could not find '" .. childName .. "' in " .. module:GetFullName(), 2)
+		end
+		module = child
 	end
 
 	if module.ClassName ~= "ModuleScript" then
