@@ -87,7 +87,7 @@ export function compileFiles(
 	let runtimeLibRbxPath: RbxPath | undefined;
 	if (projectType !== ProjectType.Package) {
 		runtimeLibRbxPath = rojoResolver.getRbxPathFromFilePath(
-			path.join(data.projectOptions.includePath, "RuntimeLib.lua"),
+			path.join(data.projectOptions.includePath, "RuntimeLib.luau"),
 		);
 		if (!runtimeLibRbxPath) {
 			return emitResultFailure("Rojo project contained no data for include folder!");

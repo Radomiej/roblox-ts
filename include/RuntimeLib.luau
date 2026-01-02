@@ -344,6 +344,48 @@ function TS.using(resource, body)
 	return result
 end
 
+-- Async Explicit Resource Management (await using statements)
+function TS.asyncUsing(resource, body)
+	return Promise.new(function(resolve, reject)
+		local success, result = pcall(body, resource)
+
+		-- Always call asyncDispose (or dispose as fallback), even if body threw
+		local disposePromise
+		if resource ~= nil then
+			local asyncDisposeMethod = resource[Symbol.asyncDispose]
+			if type(asyncDisposeMethod) == "function" then
+				disposePromise = asyncDisposeMethod(resource)
+			else
+				local disposeMethod = resource[Symbol.dispose]
+				if type(disposeMethod) == "function" then
+					disposeMethod(resource)
+				end
+			end
+		end
+
+		-- Handle async dispose
+		local function finalize()
+			if not success then
+				reject(result)
+			else
+				resolve(result)
+			end
+		end
+
+		if disposePromise and type(disposePromise.andThen) == "function" then
+			disposePromise:andThen(finalize):catch(function(disposeErr)
+				if not success then
+					reject(result) -- Original error takes precedence
+				else
+					reject(disposeErr)
+				end
+			end)
+		else
+			finalize()
+		end
+	end)
+end
+
 function TS.disposableStack()
 	local stack = {}
 	local disposed = false
