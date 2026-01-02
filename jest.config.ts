@@ -13,6 +13,7 @@ const config: Config = {
 		"src/**/*.ts",
 		"!src/CLI/**",
 		"!src/Project/**",
+		"!src/TSTransformer/macros/types.ts",
 		"!src/Shared/classes/LogService.ts",
 		"!src/TSTransformer/util/getFlags.ts",
 		"!src/TSTransformer/util/getKindName.ts",
@@ -22,7 +23,7 @@ const config: Config = {
 	coverageReporters: ["lcov", "text"],
 	verbose: true,
 	transform: {
-		"^.+\\.tsx?$": ["ts-jest", { tsconfig: "src/CLI/tsconfig.json" }],
+		"^.+\\.tsx?$": ["ts-jest", { tsconfig: "src/CLI/tsconfig.json", isolatedModules: true }],
 	},
 };
 
