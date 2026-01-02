@@ -18,6 +18,142 @@
 
 Ready to dive in? [Check out the documentation.](https://roblox-ts.com/docs)
 
+### Creating a New Project
+
+**Prerequisites:**
+- [Node.js](https://nodejs.org/) (v16 or higher)
+- [Rojo](https://rojo.space/) (v7.4.0 or higher)
+- [Roblox Studio](https://www.roblox.com/create)
+
+**Step 1: Create project directory**
+```bash
+mkdir my-roblox-game
+cd my-roblox-game
+```
+
+**Step 2: Initialize npm and install roblox-ts**
+```bash
+npm init -y
+npm install --save-dev @radomiej/roblox-ts@3.1.0-beta.4
+npm install --save-dev @rbxts/compiler-types@npm:@radomiej/compiler-types@^3.1.0-types.beta.3
+npm install --save-dev @rbxts/types typescript
+npm install --save @rbxts/services
+```
+
+**Step 3: Create project structure**
+```bash
+mkdir -p src/client src/server src/shared
+```
+
+**Step 4: Create `tsconfig.json`**
+```json
+{
+    "compilerOptions": {
+        "allowSyntheticDefaultImports": true,
+        "downlevelIteration": true,
+        "jsx": "react",
+        "jsxFactory": "React.createElement",
+        "jsxFragmentFactory": "React.Fragment",
+        "module": "commonjs",
+        "moduleResolution": "Node",
+        "noLib": true,
+        "resolveJsonModule": true,
+        "experimentalDecorators": true,
+        "forceConsistentCasingInFileNames": true,
+        "moduleDetection": "force",
+        "strict": true,
+        "target": "ESNext",
+        "typeRoots": ["node_modules/@rbxts"],
+        "rootDir": "src",
+        "outDir": "out",
+        "baseUrl": "src",
+        "incremental": true,
+        "tsBuildInfoFile": "out/tsconfig.tsbuildinfo"
+    }
+}
+```
+
+**Step 5: Create `default.project.json`**
+```json
+{
+    "name": "my-roblox-game",
+    "tree": {
+        "$className": "DataModel",
+        "ReplicatedStorage": {
+            "$className": "ReplicatedStorage",
+            "rbxts_include": {
+                "$path": "include"
+            },
+            "node_modules": {
+                "@rbxts": {
+                    "$path": "node_modules/@rbxts"
+                }
+            },
+            "TS": {
+                "$path": "out/shared"
+            }
+        },
+        "ServerScriptService": {
+            "$className": "ServerScriptService",
+            "TS": {
+                "$path": "out/server"
+            }
+        },
+        "StarterPlayer": {
+            "$className": "StarterPlayer",
+            "StarterPlayerScripts": {
+                "$className": "StarterPlayerScripts",
+                "TS": {
+                    "$path": "out/client"
+                }
+            }
+        }
+    }
+}
+```
+
+**Step 6: Add npm scripts to `package.json`**
+```json
+{
+    "scripts": {
+        "build": "npx rbxtsc --sourcemap",
+        "watch": "npx rbxtsc -w --sourcemap",
+        "dev": "rojo serve"
+    }
+}
+```
+
+**Step 7: Create example files**
+
+`src/server/main.server.ts`:
+```typescript
+import { Players } from "@rbxts/services";
+
+print("Server started!");
+
+Players.PlayerAdded.Connect((player) => {
+    print(`${player.Name} joined the game!`);
+});
+```
+
+`src/client/main.client.ts`:
+```typescript
+import { Players } from "@rbxts/services";
+
+const player = Players.LocalPlayer;
+print(`Hello, ${player.Name}!`);
+```
+
+**Step 8: Build and run**
+```bash
+npm run build
+npm run dev
+```
+
+Then open Roblox Studio and connect to Rojo (Plugins → Rojo → Connect).
+
+**📖 For best practices and common pitfalls, see [`global.md`](./global.md)**
+
 ## Join the Community!
 
 https://discord.roblox-ts.com
