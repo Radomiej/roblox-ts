@@ -52,4 +52,5 @@ export const DEFAULT_PROJECT_OPTIONS: ProjectOptions = {
 	optimizedLoops: true,
 	allowCommentDirectives: false,
 	luau: true,
+	sourcemap: false,
 };

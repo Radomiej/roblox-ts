@@ -16,9 +16,10 @@
 | #2811 | sourcemap + typegen CLI | ✅ Done | `rbxtsc sourcemap`, `rbxtsc typegen` |
 | #2813 | .d.ts transform paths | ✅ Done | Already implemented in `compileFiles.ts` |
 | #2840 | ForOf iteration over `any` type | ✅ Done | Uses `pairs()` fallback instead of crash |
-| #2847 | Functions declared after return | ✅ Done | Properly hoisted and emitted |
+| #2847 | Functions declared after return | ⚠️ Partial | Hoisted, but closures over locals have limitations |
 | #2863 | string.startsWith/endsWith | ✅ Done | New string macros |
 | #2888 | @native decorator | ✅ Done | Luau Native CodeGen support |
+| N/A | Runtime Sourcemap (MVP) | ⚠️ Partial | `--sourcemap` flag, 1:1 line mapping only |
 
 ### Additional Improvements in 3.1.0
 
@@ -26,6 +27,7 @@
 - `Symbol.asyncDispose` + `TS.asyncUsing()` runtime
 - ESLint 9 + consolidated configuration
 - Upstream fixes (2917, 2970, 2991, 2962, etc.)
+- Runtime sourcemap support (MVP) - file mappings with 1:1 line mapping
 
 ---
 
@@ -42,6 +44,7 @@
 
 | Issue | Name | Effort | Impact | Notes |
 |-------|------|--------|--------|-------|
+| N/A | Full Sourcemap Line Mapping | 8h | Medium | Real TS→Lua line mapping (currently 1:1) |
 | #2936 | LuaTuple optional chaining optimization | 4h | Medium | `select` instead of array wrappers |
 | #2974 | Workspaces/monorepo support | 10h | High | Multi-project compilation |
 | #2987 | Rojo packages not in type roots | 4h | Medium | Better support for Rojo packages |

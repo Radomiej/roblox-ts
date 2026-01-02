@@ -253,14 +253,15 @@ export function transformStatementList(
 				}
 			}
 
-			// Insert hoisted functions after hoist declarations (simplified approach)
-			// This ensures functions are defined before being called in most cases
-			// Note: Functions using local variables must have those variables hoisted
+			// Insert hoisted functions after hoist declarations ONLY (not after initialized variables)
+			// This ensures functions are defined before being called, while still allowing them
+			// to capture variables that are hoisted at the top of the scope
 			if (luau.list.isNonEmpty(hoistedFunctions)) {
 				let insertPoint = result.head;
 				let lastHoistDecl: luau.ListNode<luau.Statement> | undefined;
 
 				// Find the last hoist declaration (variable without initialization)
+				// Stop at the first non-hoist statement to avoid inserting after initialized variables
 				while (insertPoint) {
 					if (
 						luau.isVariableDeclaration(insertPoint.value) &&
@@ -269,7 +270,7 @@ export function transformStatementList(
 						lastHoistDecl = insertPoint;
 						insertPoint = insertPoint.next;
 					} else {
-						// Stop at first non-hoist statement
+						// Stop at first non-hoist statement (initialized variable or other statement)
 						break;
 					}
 				}

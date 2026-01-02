@@ -10,6 +10,18 @@ local TS = {}
 
 TS.Promise = Promise
 
+-- Initialize sourcemap support if available (must be before TS.try definition)
+TS.SourcemapModule = nil
+pcall(function()
+	local sourcemapScript = script.Parent:FindFirstChild("RuntimeLib.Sourcemap")
+	if sourcemapScript and sourcemapScript:IsA("ModuleScript") then
+		TS.SourcemapModule = require(sourcemapScript)
+		if TS.SourcemapModule and TS.SourcemapModule.init then
+			TS.SourcemapModule.init()
+		end
+	end
+end)
+
 local SymbolRegistry = {}
 local Symbol = setmetatable({}, {
 	__call = function(_, description)
@@ -259,6 +271,10 @@ function TS.try(try, catch, finally)
 		exitType = exitTypeOrTryError
 	else
 		tryError = exitTypeOrTryError
+		-- Enhance error with sourcemap if available
+		if TS.SourcemapModule and TS.SourcemapModule.enhanceError then
+			tryError = TS.SourcemapModule.enhanceError(tostring(tryError))
+		end
 	end
 
 	local catchSuccess = true

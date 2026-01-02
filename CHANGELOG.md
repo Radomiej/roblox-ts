@@ -29,6 +29,12 @@
 - **String Methods: startsWith/endsWith** ([#2863][2863])
   - New string macros: `str.startsWith(search)` and `str.endsWith(search)`
   - Compiles to efficient `string.sub` comparisons
+- **Runtime Sourcemap Support** - `--sourcemap` flag
+  - Generates `Sourcemap.luau` with file and line mappings for runtime error tracking
+  - RuntimeLib integration for enhanced error messages with `warn()` output
+  - Shows TypeScript source file and approximate line number for Lua runtime errors
+  - Uses function/class landmarks for ~80% accurate line mapping
+  - Supports server/client/shared folder structure automatically
 
 ### 🛠 Technical Improvements
 
@@ -66,7 +72,16 @@
   - Now uses `pairs()` fallback instead of crashing with "ForOf iteration type not implemented: any"
 - **Fixed functions declared after return statements not being emitted** ([#2847][2847])
   - Functions are now properly hoisted and emitted after hoist declarations
-  - Known limitation: Functions using non-hoisted local variables may have closure issues (edge case)
+  - **Known Limitation:** Functions that close over local variables declared before them cannot be fully hoisted due to Lua's sequential execution model. This is a fundamental limitation without implementing full dependency graph analysis. Example:
+    ```typescript
+    function test() {
+        let x = 0;
+        f(); // f cannot access x properly
+        return x;
+        function f() { x = 1; } // Closes over x
+    }
+    ```
+  - Workaround: Declare such functions before the return statement or use arrow functions
 - Optimized bitwise operations with variable length arguments ([#2940][2940])
 - SharedTable iteration support ([#2938][2938])
 - Optimized binding pattern emit for variable creation ([#2946][2946])

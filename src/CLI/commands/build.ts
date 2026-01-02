@@ -115,6 +115,10 @@ export = ts.identity<yargs.CommandModule<object, BuildFlags & Partial<ProjectOpt
 			.option("luau", {
 				boolean: true,
 				describe: "emit files with .luau extension",
+			})
+			.option("sourcemap", {
+				boolean: true,
+				describe: "enable runtime sourcemap support for better error messages",
 			}),
 
 	handler: async argv => {
