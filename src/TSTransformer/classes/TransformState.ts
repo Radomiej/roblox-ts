@@ -24,6 +24,7 @@ export class TransformState {
 	private readonly sourceFileText: string;
 	public hasExportEquals = false;
 	public hasExportFrom = false;
+	public hasNativeDirective = false;
 
 	public classIdentifierMap = new Map<ts.ClassLikeDeclaration, luau.AnyIdentifier>();
 

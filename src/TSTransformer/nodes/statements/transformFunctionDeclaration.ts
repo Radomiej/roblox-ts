@@ -42,6 +42,11 @@ export function transformFunctionDeclaration(state: TransformState, node: ts.Fun
 
 	// Check for @native JSDoc tag
 	const isNative = hasNativeTag(node);
+	if (isNative) {
+		// Luau comment directives like --!native must be at the top of the file.
+		// transformSourceFile will emit it as a leading directive when needed.
+		state.hasNativeDirective = true;
+	}
 
 	let { statements, parameters, hasDotDotDot } = transformParameters(state, node);
 	luau.list.pushList(statements, transformStatementList(state, node.body, node.body.statements));
@@ -63,11 +68,6 @@ export function transformFunctionDeclaration(state: TransformState, node: ts.Fun
 	}
 
 	const result = luau.list.make<luau.Statement>();
-
-	// Add --!native directive comment if @native JSDoc tag is present
-	if (isNative) {
-		luau.list.push(result, luau.comment("!native"));
-	}
 
 	if (isAsync) {
 		const right = luau.call(state.TS(node, "async"), [

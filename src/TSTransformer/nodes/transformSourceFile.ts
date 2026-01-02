@@ -233,6 +233,9 @@ export function transformSourceFile(state: TransformState, node: ts.SourceFile) 
 	}
 
 	const headerStatements = luau.list.make<luau.Statement>();
+	if (state.hasNativeDirective) {
+		luau.list.push(headerStatements, luau.comment("!native"));
+	}
 
 	// add build information to the tree
 	luau.list.push(headerStatements, luau.comment(` Compiled with roblox-ts v${COMPILER_VERSION}`));
