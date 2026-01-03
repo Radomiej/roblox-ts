@@ -1,8 +1,8 @@
-import { CLIError } from "CLI/errors/CLIError";
 import fs from "fs-extra";
-import path from "path";
-import { LogService } from "Shared/classes/LogService";
 import * as luaparse from "luaparse";
+import path from "path";
+import { CLIError } from "CLI/errors/CLIError";
+import { LogService } from "Shared/classes/LogService";
 import ts from "typescript";
 import type yargs from "yargs";
 
@@ -21,9 +21,10 @@ interface LuauExport {
 }
 
 interface LuauReturn {
-	type: "identifier" | "table" | "unknown";
+	type: "identifier" | "table" | "function" | "unknown";
 	name?: string;
 	fields?: Array<LuauExport>;
+	functionExport?: LuauExport;
 }
 
 interface ParsedLuauModule {
@@ -34,8 +35,16 @@ interface ParsedLuauModule {
 type LuaAstNode = { type: string; loc?: { start: { line: number } } };
 type LuaIdentifier = LuaAstNode & { type: "Identifier"; name: string };
 type LuaMemberExpression = LuaAstNode & { type: "MemberExpression"; base: LuaAstNode; identifier?: LuaAstNode };
-type LuaFunctionDeclaration = LuaAstNode & { type: "FunctionDeclaration"; parameters?: Array<LuaIdentifier>; identifier?: LuaAstNode };
-type LuaAssignmentStatement = LuaAstNode & { type: "AssignmentStatement"; variables?: Array<LuaAstNode>; init?: Array<LuaAstNode> };
+type LuaFunctionDeclaration = LuaAstNode & {
+	type: "FunctionDeclaration";
+	parameters?: Array<LuaIdentifier>;
+	identifier?: LuaAstNode;
+};
+type LuaAssignmentStatement = LuaAstNode & {
+	type: "AssignmentStatement";
+	variables?: Array<LuaAstNode>;
+	init?: Array<LuaAstNode>;
+};
 type LuaReturnStatement = LuaAstNode & { type: "ReturnStatement"; arguments?: Array<LuaAstNode> };
 type LuaTableKeyString = LuaAstNode & { type: "TableKeyString"; key?: LuaAstNode; value?: LuaAstNode };
 type LuaTableKey = LuaAstNode & { type: "TableKey"; key?: LuaAstNode; value?: LuaAstNode };
@@ -44,6 +53,77 @@ type LuaTableConstructorExpression = LuaAstNode & {
 	fields?: Array<LuaTableKeyString | LuaTableKey>;
 };
 type LuaStringLiteral = LuaAstNode & { type: "StringLiteral"; value: string };
+
+function isFunctionDeclaration(node: LuaAstNode): node is LuaFunctionDeclaration {
+	return node.type === "FunctionDeclaration";
+}
+
+function tryGetReturnFunctionSignature(lines: Array<string>, returnNode: LuaAstNode): LuauExport | undefined {
+	if (!isFunctionDeclaration(returnNode)) return undefined;
+	const fn = returnNode;
+	const params = (fn.parameters ?? []).map(p => p.name);
+	const functionLine = fn.loc?.start?.line;
+	const annotations =
+		typeof functionLine === "number" ? parseAnnotations(getAnnotationBlock(lines, functionLine)) : undefined;
+	return {
+		name: "default",
+		type: "function",
+		params,
+		paramTypes: annotations?.paramTypes,
+		returnType: annotations?.returnType,
+	};
+}
+
+function tryGetNamedFunctionExport(
+	lines: Array<string>,
+	body: Array<LuaAstNode>,
+	name: string,
+): LuauExport | undefined {
+	for (const node of body) {
+		if (node.type === "FunctionDeclaration") {
+			const fn = node as LuaFunctionDeclaration;
+			const idName = getIdentifierName(fn.identifier);
+			if (idName !== name) continue;
+			const params = (fn.parameters ?? []).map(p => p.name);
+			const functionLine = fn.loc?.start?.line;
+			const annotations =
+				typeof functionLine === "number"
+					? parseAnnotations(getAnnotationBlock(lines, functionLine))
+					: undefined;
+			return {
+				name,
+				type: "function",
+				params,
+				paramTypes: annotations?.paramTypes,
+				returnType: annotations?.returnType,
+			};
+		}
+		if (node.type === "AssignmentStatement") {
+			const assign = node as LuaAssignmentStatement;
+			for (let i = 0; i < (assign.variables?.length ?? 0); i++) {
+				const v = assign.variables?.[i];
+				if (getIdentifierName(v) !== name) continue;
+				const init = assign.init?.[i];
+				if (isLuaAstNode(init) && init.type === "FunctionDeclaration") {
+					const fn = init as LuaFunctionDeclaration;
+					const params = (fn.parameters ?? []).map(p => p.name);
+					const functionLine = fn.loc?.start?.line;
+					const annotations =
+						typeof functionLine === "number"
+							? parseAnnotations(getAnnotationBlock(lines, functionLine))
+							: undefined;
+					return {
+						name,
+						type: "function",
+						params,
+						paramTypes: annotations?.paramTypes,
+						returnType: annotations?.returnType,
+					};
+				}
+			}
+		}
+	}
+}
 
 function isLuaAstNode(value: unknown): value is LuaAstNode {
 	return typeof value === "object" && value !== null && "type" in value;
@@ -96,7 +176,6 @@ function getIdentifierName(node: unknown): string | undefined {
 	if (!isLuaAstNode(node)) return undefined;
 	return node.type === "Identifier" && "name" in node ? (node as LuaIdentifier).name : undefined;
 }
-
 
 function getMemberExportName(moduleName: string, node: unknown): string | undefined {
 	if (!isLuaAstNode(node) || node.type !== "MemberExpression") return undefined;
@@ -155,6 +234,9 @@ function parseLuauFileAst(filePath: string): ParsedLuauModule | undefined {
 	if (isLuaAstNode(returnArg) && returnArg.type === "Identifier") {
 		returnInfo.type = "identifier";
 		returnInfo.name = (returnArg as LuaIdentifier).name;
+	} else if (isLuaAstNode(returnArg) && returnArg.type === "FunctionDeclaration") {
+		returnInfo.type = "function";
+		returnInfo.functionExport = tryGetReturnFunctionSignature(lines, returnArg);
 	} else if (isLuaAstNode(returnArg) && returnArg.type === "TableConstructorExpression") {
 		returnInfo.type = "table";
 		returnInfo.fields = [];
@@ -238,6 +320,15 @@ function parseLuauFileAst(filePath: string): ParsedLuauModule | undefined {
 				}
 			}
 		}
+
+		// If no member exports were found, treat `return <id>` as function export if <id> is a function.
+		if (exports.length === 0) {
+			const fn = tryGetNamedFunctionExport(lines, body, moduleName);
+			if (fn) {
+				returnInfo.type = "function";
+				returnInfo.functionExport = fn;
+			}
+		}
 	}
 
 	return { returnInfo, exports };
@@ -258,9 +349,7 @@ function generateDts(
 		for (const exp of parsed.returnInfo.fields) {
 			if (exp.type === "function") {
 				const params = exp.params ?? [];
-				const paramList = params
-					.map(p => `${p}: ${exp.paramTypes?.[p] ?? "unknown"}`)
-					.join(", ");
+				const paramList = params.map(p => `${p}: ${exp.paramTypes?.[p] ?? "unknown"}`).join(", ");
 				lines.push(`\t${exp.name}: (${paramList}) => ${exp.returnType ?? "unknown"};`);
 			} else {
 				lines.push(`\t${exp.name}: unknown;`);
@@ -269,15 +358,20 @@ function generateDts(
 		lines.push(`};`);
 		lines.push(``);
 		lines.push(`export = ${moduleName};`);
+	} else if (parsed?.returnInfo.type === "function" && parsed.returnInfo.functionExport) {
+		const fn = parsed.returnInfo.functionExport;
+		const params = fn.params ?? [];
+		const paramList = params.map(p => `${p}: ${fn.paramTypes?.[p] ?? "unknown"}`).join(", ");
+		lines.push(`declare function ${moduleName}(${paramList}): ${fn.returnType ?? "unknown"};`);
+		lines.push(``);
+		lines.push(`export = ${moduleName};`);
 	} else {
 		lines.push(`declare namespace ${moduleName} {`);
 		const exports = parsed?.exports ?? fallbackExports;
 		for (const exp of exports) {
 			if (exp.type === "function") {
 				const params = exp.params ?? [];
-				const paramList = params
-					.map(p => `${p}: ${exp.paramTypes?.[p] ?? "unknown"}`)
-					.join(", ");
+				const paramList = params.map(p => `${p}: ${exp.paramTypes?.[p] ?? "unknown"}`).join(", ");
 				lines.push(`\tfunction ${exp.name}(${paramList}): ${exp.returnType ?? "unknown"};`);
 			} else {
 				lines.push(`\tconst ${exp.name}: unknown;`);
@@ -357,7 +451,8 @@ export = ts.identity<yargs.CommandModule<object, TypegenFlags>>({
 
 				const parsed = parseLuauFileAst(file);
 				const exports = parsed?.exports ?? parseLuauFileRegex(file);
-				const hasAny = exports.length > 0 || parsed?.returnInfo.type === "table";
+				const hasAny =
+					exports.length > 0 || parsed?.returnInfo.type === "table" || parsed?.returnInfo.type === "function";
 				if (!hasAny) {
 					LogService.writeLineIfVerbose(`  No exports found, skipping`);
 					continue;

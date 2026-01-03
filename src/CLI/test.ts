@@ -1,6 +1,8 @@
 /// <reference types="jest" />
 
+import { spawnSync } from "child_process";
 import fs from "fs-extra";
+import os from "os";
 import path from "path";
 import { compileFiles } from "Project/functions/compileFiles";
 import { copyFiles } from "Project/functions/copyFiles";
@@ -262,5 +264,131 @@ describe("CLI commands", () => {
 		const includePath = path.join(PACKAGE_ROOT, "include");
 		expect(fs.existsSync(path.join(includePath, "Promise.luau"))).toBe(true);
 		expect(fs.existsSync(path.join(includePath, "RuntimeLib.luau"))).toBe(true);
+	});
+
+	it("should generate .d.ts from a Luau module table export (experimental)", () => {
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rbxtsc-typegen-"));
+		const inputFile = path.join(tmpDir, "MyLib.luau");
+		const outDir = path.join(tmpDir, "out");
+
+		fs.writeFileSync(
+			inputFile,
+			[
+				"local M = {}",
+				"",
+				"---@param x number",
+				"---@param y string",
+				"---@return boolean",
+				"function M.foo(x, y)",
+				"\treturn true",
+				"end",
+				"",
+				"M.bar = 123",
+				"M.baz = function(z)",
+				"\treturn z",
+				"end",
+				"",
+				"return M",
+			].join("\n"),
+		);
+
+		fs.ensureDirSync(outDir);
+		const cliPath = path.join(PACKAGE_ROOT, "out", "CLI", "cli.js");
+		const result = spawnSync(process.execPath, [cliPath, "typegen", "-i", inputFile, "-o", outDir], {
+			cwd: PACKAGE_ROOT,
+			encoding: "utf8",
+		});
+		expect(result.status).toBe(0);
+
+		const dtsPath = path.join(outDir, "MyLib.d.ts");
+		expect(fs.existsSync(dtsPath)).toBe(true);
+		const dts = fs.readFileSync(dtsPath, "utf-8");
+		expect(dts).toContain("function foo(x: number, y: string): boolean;");
+		expect(dts).toContain("const bar: unknown;");
+		expect(dts).toContain("function baz(z: unknown): unknown;");
+	});
+
+	it("should generate .d.ts from a Luau table literal return (experimental)", () => {
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rbxtsc-typegen-"));
+		const inputFile = path.join(tmpDir, "ReturnTable.luau");
+		const outDir = path.join(tmpDir, "out");
+
+		fs.writeFileSync(
+			inputFile,
+			["return {", "\tfoo = function(a)", "\t\treturn a", "\tend,", "\tbar = 123,", "}"].join("\n"),
+		);
+
+		fs.ensureDirSync(outDir);
+		const cliPath = path.join(PACKAGE_ROOT, "out", "CLI", "cli.js");
+		const result = spawnSync(process.execPath, [cliPath, "typegen", "-i", inputFile, "-o", outDir], {
+			cwd: PACKAGE_ROOT,
+			encoding: "utf8",
+		});
+		expect(result.status).toBe(0);
+
+		const dtsPath = path.join(outDir, "ReturnTable.d.ts");
+		expect(fs.existsSync(dtsPath)).toBe(true);
+		const dts = fs.readFileSync(dtsPath, "utf-8");
+		expect(dts).toContain("declare const ReturnTable");
+		expect(dts).toContain("foo: (a: unknown) => unknown;");
+		expect(dts).toContain("bar: unknown;");
+	});
+
+	it("should generate .d.ts from a Luau function export (return identifier) (experimental)", () => {
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rbxtsc-typegen-"));
+		const inputFile = path.join(tmpDir, "FuncExportId.luau");
+		const outDir = path.join(tmpDir, "out");
+
+		fs.writeFileSync(
+			inputFile,
+			[
+				"---@param x number",
+				"---@return string",
+				"local function main(x)",
+				"\treturn tostring(x)",
+				"end",
+				"",
+				"return main",
+			].join("\n"),
+		);
+
+		fs.ensureDirSync(outDir);
+		const cliPath = path.join(PACKAGE_ROOT, "out", "CLI", "cli.js");
+		const result = spawnSync(process.execPath, [cliPath, "typegen", "-i", inputFile, "-o", outDir], {
+			cwd: PACKAGE_ROOT,
+			encoding: "utf8",
+		});
+		expect(result.status).toBe(0);
+
+		const dtsPath = path.join(outDir, "FuncExportId.d.ts");
+		expect(fs.existsSync(dtsPath)).toBe(true);
+		const dts = fs.readFileSync(dtsPath, "utf-8");
+		expect(dts).toContain("declare function FuncExportId(x: number): string;");
+		expect(dts).toContain("export = FuncExportId;");
+	});
+
+	it("should generate .d.ts from a Luau function export (return function literal) (experimental)", () => {
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rbxtsc-typegen-"));
+		const inputFile = path.join(tmpDir, "FuncExportLit.luau");
+		const outDir = path.join(tmpDir, "out");
+
+		fs.writeFileSync(
+			inputFile,
+			["---@param name string", "---@return string", "return function(name)", "\treturn name", "end"].join("\n"),
+		);
+
+		fs.ensureDirSync(outDir);
+		const cliPath = path.join(PACKAGE_ROOT, "out", "CLI", "cli.js");
+		const result = spawnSync(process.execPath, [cliPath, "typegen", "-i", inputFile, "-o", outDir], {
+			cwd: PACKAGE_ROOT,
+			encoding: "utf8",
+		});
+		expect(result.status).toBe(0);
+
+		const dtsPath = path.join(outDir, "FuncExportLit.d.ts");
+		expect(fs.existsSync(dtsPath)).toBe(true);
+		const dts = fs.readFileSync(dtsPath, "utf-8");
+		expect(dts).toContain("declare function FuncExportLit(name: string): string;");
+		expect(dts).toContain("export = FuncExportLit;");
 	});
 });
