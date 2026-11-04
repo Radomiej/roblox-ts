@@ -28,7 +28,7 @@ Baza: aktualny upstream `68648b0c633ef1016009aec7521b528f648ba656`, gałąź
 - [x] Siedem rodzin właściwości: przypisania, short-circuit, optional calls, destrukturyzacja, spread, Map.
 - [x] Pełny npm test: 1005 testów kompilatora + 933 runtime + 32 JS + 12 property/oracle, 238 snapshotów, sourcemap; pełny ESLint i sprawdzenie typów testów przechodzą. Połączony Stryker: 64/101 (63,37%), 37 ocalałych, zero braków pokrycia, timeoutów i błędów.
 - [ ] Zbadać 30 nierozstrzygniętych survivorów planera; 7 pozostałych ma uzasadnienie równoważności runtime (nazwy/warunek konstrukcyjny).
-- [ ] Naprawić iterację tablic z elementami undefined; reprodukcja: docs/repros/js-undefined-array.js. To znane ograniczenie reprezentacji tablic, nie błąd harnessu.
+- [ ] Pełna obsługa tablic z undefined wymaga migracji reprezentacji. Próba pętli indeksowej wycofana: 2/8 → 4/8 poprawnych przypadków, nadal giną końcowe i wszystkie undefined. Opis i opt-in probe: docs/undefined-array-attempt.md. Nie deklarować zgodności 1:1 z biblioteką JS.
 
 ### Ograniczenia semantyki zasobów i iteratorów
 

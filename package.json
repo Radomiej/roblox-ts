@@ -36,7 +36,8 @@
 		"test:property": "npm run test:property:types && jest --config jest.property.config.ts --runInBand",
 		"test:planner:mutation": "stryker run stryker.prereqs.config.mjs",
 		"test:property:mutation": "stryker run stryker.property.config.mjs",
-		"test:property:types": "tsc --noEmit -p tests/property/tsconfig.json"
+		"test:property:types": "tsc --noEmit -p tests/property/tsconfig.json",
+		"test:undefined-array:probe": "jest --config jest.property.config.ts --runInBand --testMatch '**/undefined-array.probe.ts'"
 	},
 	"author": "",
 	"license": "MIT",

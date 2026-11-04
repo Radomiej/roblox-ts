@@ -82,3 +82,7 @@ package export maps; the compiler itself still targets its existing module mode.
 
 Final combined Stryker run: 64 killed, 37 surviving, zero uncovered/error/timeout
 mutants (63.37%), compared with the earlier 57/101. No exclusions were added.
+
+A bounded indexed-iteration fix was attempted and reverted. See
+[undefined-array-attempt.md](undefined-array-attempt.md) for the eight-case matrix
+and `npm run test:undefined-array:probe` to reproduce the open failures.
