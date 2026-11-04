@@ -24,12 +24,14 @@ passed explicitly so sandboxed mutants still compile against the intended types.
 - TypeScript yield/project metadata: **74 killed, 6 survived, 1 no coverage**
   of 81, no timeouts or errors. Reports: reports/mutation-ts/. Surviving yield
   mutations rename temporaries; the metadata fallback mutation has no coverage.
-- Evaluation planner: **57 killed, 42 survived, 2 no coverage** of 101,
-  no errors/timeouts (56.44% overall, 57.58% covered). Added macro argument,
-  receiver mutation and string-index scenarios improved the first run's 20 kills
-  to 57. Survivors remain unclassified across slot/reference handling, use/event
-  mapping, capture analysis and substitution; they are a coverage gap requiring
-  further investigation. Reports: reports/mutation-prereqs/.
+- Evaluation planner after additional TS regressions: **61 killed, 40 survived,
+  0 no coverage** of 101. Reports: reports/mutation-prereqs/.
+- Final planner run including the generated JS corpus: **64 killed, 37 survived,
+  0 no coverage** of 101 (63.37%), no errors/timeouts. Reports:
+  reports/mutation-property/. This improves the earlier 57/101 baseline.
+  Seven survivors have runtime-equivalence evidence (temporary naming and a
+  construction-invariant guard); the other thirty remain unresolved. See
+  planner-survivors.md and property-testing.md. No mutants were excluded.
 
 The planner runtime fixture already exposed duplicated evaluation of a computed
 compound-assignment target. A source regression and a runtime assertion now
@@ -41,3 +43,6 @@ The earlier 85/85 JavaScript result belonged to the previous 3.1.0 base; the
 current adapter delegates declaration handling to upstream and has 81 mutants.
 
 Full repository `npm run eslint` now passes on the upstream-based integration.
+
+Full compiler-suite coverage in the completed npm test run is 97.28% lines,
+93.08% branches for the configured source scope. This is distinct from mutation score.

@@ -21,6 +21,7 @@ export default defineConfig(
 					"./tsconfig.eslint.json",
 					"./src/*/tsconfig.json",
 					"./tests/compiler/tsconfig.json",
+					"./tests/property/tsconfig.json",
 				],
 				ecmaFeatures: { jsx: true },
 			},
@@ -71,7 +72,14 @@ export default defineConfig(
 		},
 	},
 	{
-		files: ["tests/compiler/**/*.ts", "tests/js-support/**/*.ts", "tests/ts-mutation/*.ts"],
+		files: [
+			"tests/compiler/**/*.ts",
+			"tests/js-support/**/*.ts",
+			"tests/ts-mutation/*.ts",
+			"tests/property/**/*.ts",
+			"jest.*.config.ts",
+			"stryker.*.config.mjs",
+		],
 		rules: {
 			"no-restricted-imports": "off",
 		},
@@ -81,6 +89,7 @@ export default defineConfig(
 			".local/",
 			".stryker-tmp/",
 			"reports/",
+			"docs/repros/",
 			"submodules/",
 			"node_modules/",
 			"tests/src/",

@@ -219,3 +219,54 @@ const conditionalResult = true
 	: conditionalValue("skipped", 2);
 assertEqual(conditionalResult, 1, "conditional expression chosen value");
 assertEqual(conditionalEvents.join("|"), "chosen", "conditional expression evaluates one branch");
+
+const discardedStringEvents: Array<string> = [];
+function getDiscardedString() {
+	discardedStringEvents.push("receiver");
+	return "text";
+}
+assertEqual(getDiscardedString()[-1], undefined, "negative literal string index result");
+assertEqual(discardedStringEvents.join("|"), "receiver", "discarded string base still evaluates once");
+
+assertEqual(typeIs(new Vector2(1, 2), "userdata"), true, "typeIs selects primitive type for a literal name");
+
+let optionalVector: Vector2 | undefined;
+const optionalVectorEvents: Array<string> = [];
+function optionalVectorArgument() {
+	optionalVectorEvents.push("argument");
+	return new Vector2(3, 4);
+}
+optionalVector?.add(optionalVectorArgument());
+assertEqual(optionalVectorEvents.size(), 0, "optional math macro skips arguments for an absent receiver");
+optionalVector = new Vector2(1, 2);
+const optionalVectorResult = optionalVector?.add(optionalVectorArgument());
+assertEqual(optionalVectorResult?.X, 4, "optional math macro result x");
+assertEqual(optionalVectorResult?.Y, 6, "optional math macro result y");
+assertEqual(optionalVectorEvents.size(), 1, "optional math macro evaluates a present argument once");
+
+const interleavedBox: { value: unknown } = { value: new Vector2(7, 8) };
+const interleavedEvents: Array<string> = [];
+function mutateInterleavedBox(): "Vector2" {
+	interleavedEvents.push("argument");
+	interleavedBox.value = "changed";
+	return "Vector2";
+}
+assertEqual(
+	typeIs(interleavedBox.value, mutateInterleavedBox()),
+	true,
+	"macro captures an earlier property read before later argument prerequisites",
+);
+assertEqual(interleavedEvents.join("|"), "argument", "later type argument runs once");
+
+let optionalMapped: Array<number> | undefined;
+let mapperCreations = 0;
+function createMapper() {
+	mapperCreations++;
+	return (value: number) => value + 1;
+}
+optionalMapped?.map(createMapper());
+assertEqual(mapperCreations, 0, "optional repeated macro skips arguments for an absent receiver");
+optionalMapped = [1, 2, 3];
+const mappedValues = optionalMapped.map(createMapper());
+assertEqual(mapperCreations, 1, "repeated macro evaluates its callback factory once");
+assertEqual(mappedValues.join("|"), "2|3|4", "repeated macro reuses one callback throughout iteration");

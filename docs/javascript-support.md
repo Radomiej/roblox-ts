@@ -26,3 +26,6 @@ npm run test:mutation
 ```
 
 The first command runs the focused JavaScript-support Jest suite. The coverage command adds Jest coverage reporting; the mutation command runs Stryker against the configured JavaScript-support targets.
+
+For generated Node-versus-Luau tests, replay seeds, known array limitations and
+mutation coverage, see [property-testing.md](property-testing.md).

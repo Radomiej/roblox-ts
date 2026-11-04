@@ -1,3 +1,15 @@
+# Follow-up with property testing
+
+The complete npm test pipeline was rerun after adding fast-check and passed:
+72 compiler suites / 1005 tests / 238 snapshots; 933 runtime tests; 32 JS tests;
+sourcemap runtime check; and 3 property suites / 12 tests. Full compiler source
+coverage in its configured scope is 97.28% lines and 93.08% branches. Full ESLint
+passes. Final combined planner mutations: 64 killed, 37 survived, no uncovered,
+error or timeout mutants (63.37%). See property-testing.md for reproduction.
+
+The record below describes the earlier integration checkpoint, before that full
+rerun, and is preserved as history.
+
 # Verification of local 3.2.0-alechemy integration
 
 Base: upstream 68648b0c633ef1016009aec7521b528f648ba656.

@@ -10,10 +10,10 @@ Baza: aktualny upstream `68648b0c633ef1016009aec7521b528f648ba656`, gałąź
 - [x] Przenieść rozszerzenia alchemy: makra, Symbol, using/await using, native, typegen, sourcemap oraz opt-in JS.
 - [x] Zachować TS 5.9.3 i aktualne API/compiler-types; przywrócić upstreamowe indeksowanie stringów.
 - [x] Dodać regresje dla kolejności obliczeń, Map z undefined, wywołań LuaTuple, hoistingu funkcji i tożsamości rzucanych obiektów.
-- [x] Zweryfikować upstream i runtime po portowaniu: 259 przypadków kompilacji, 933 runtime, 32 JS, pełny lint. Pełny przebieg jednostkowy: 738/746, a wszystkie osiem wykazanych porażek rozstrzygnięte poprawkami i celowanymi powtórzeniami; szczegóły w docs/verification-3.2.0-alechemy.md.
+- [x] Zweryfikować upstream i runtime po portowaniu: pełny npm test przechodzi (1005 Jest, 933 runtime, 32 JS, 12 property/oracle, 238 snapshotów, sourcemap), pełny lint. Wcześniejsze porażki są rozwiązane; historia w docs/verification-3.2.0-alechemy.md.
 - [x] Uzupełnić protokół zamykania generatorów: finally, zagnieżdżone yield*, dispose i propagacja błędów cleanupu. **933 testy runtime przechodzą**, w tym kolejność cleanupu try/catch. Pozostałe granice opisane poniżej.
 - [x] Uruchomić mutacje transformera TS: **74 zabite, 6 ocalałych zmian nazw tymczasowych, 1 bez pokrycia z 81**, bez błędów i timeoutów. Szczegóły w raportach.
-- [x] Mutacje planera: **57 zabitych, 42 ocalałe, 2 bez pokrycia ze 101**, bez błędów/timeoutów. Adapter JS: **81/81 zabitych**; 32 testy JS przechodzą. Ocalałe mutacje planera wymagają dalszych testów i analizy.
+- [x] Mutacje planera po rozszerzeniu TS i fast-check: **64 zabite, 37 ocalałych, 0 bez pokrycia ze 101**, bez błędów/timeoutów. Adapter JS: **81/81 zabitych**; 32 testy JS przechodzą. Ocalałe mutacje planera wymagają dalszych testów i analizy.
 - [x] Przegląd integracji oraz /workspace/changes-3.2.0-alechemy.tar.gz; patche czterech repozytoriów przechodzą git apply --check w czystych klonach.
 - [ ] Włączyć publikację obu pakietów z main po integracji i konfiguracji npm Trusted Publishers; workflow przygotowane lokalnie.
 - [ ] Zmierzyć i uzupełnić pełne pokrycie patcha wymagane przez codecov.yml (100%); obecne raporty JS/Stryker obejmują wskazane zakresy, nie cały patch.
@@ -21,6 +21,14 @@ Baza: aktualny upstream `68648b0c633ef1016009aec7521b528f648ba656`, gałąź
 - [ ] Naprawić zależność @rbxts/rodux w roblox-pure-game.
 - [ ] Pełny IteratorClose po niejawnych wyjątkach w ciele pętli: obecna poprawka zamyka generator przy break, return i jawnym throw; wyjątek rzucony przez wywołaną funkcję wymaga szerszej przebudowy sterowania.
 - [x] Zweryfikować runtime obsługi kluczy undefined w Map: prywatny znacznik, konstruktor, set/get/has/delete oraz odkodowanie iteracji/spreadu/destrukturyzacji. Regresja runtime przechodzi.
+
+## Fast-check i analiza ocalałych mutacji
+
+- [x] Dodać generator prawidłowych programów JS oraz rzeczywiste porównanie Node/Luau.
+- [x] Siedem rodzin właściwości: przypisania, short-circuit, optional calls, destrukturyzacja, spread, Map.
+- [x] Pełny npm test: 1005 testów kompilatora + 933 runtime + 32 JS + 12 property/oracle, 238 snapshotów, sourcemap; pełny ESLint i sprawdzenie typów testów przechodzą. Połączony Stryker: 64/101 (63,37%), 37 ocalałych, zero braków pokrycia, timeoutów i błędów.
+- [ ] Zbadać 30 nierozstrzygniętych survivorów planera; 7 pozostałych ma uzasadnienie równoważności runtime (nazwy/warunek konstrukcyjny).
+- [ ] Naprawić iterację tablic z elementami undefined; reprodukcja: docs/repros/js-undefined-array.js. To znane ograniczenie reprezentacji tablic, nie błąd harnessu.
 
 ### Ograniczenia semantyki zasobów i iteratorów
 
