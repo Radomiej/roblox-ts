@@ -1,6 +1,7 @@
 import { PathTranslator } from "@roblox-ts/path-translator";
 import fs from "fs-extra";
 import { ProjectData } from "Project";
+import { JavaScriptPathTranslator } from "Project/functions/createPathTranslator";
 import { isCompilableFile } from "Project/util/isCompilableFile";
 import { DTS_EXT } from "Shared/constants";
 
@@ -20,7 +21,7 @@ export function copyItem(data: ProjectData, pathTranslator: PathTranslator, item
 				return pathTranslator.declaration;
 			}
 
-			return !isCompilableFile(src);
+			return !isCompilableFile(src, pathTranslator instanceof JavaScriptPathTranslator);
 		},
 		dereference: true,
 	});

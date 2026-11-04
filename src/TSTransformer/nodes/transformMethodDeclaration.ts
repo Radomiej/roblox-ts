@@ -7,6 +7,7 @@ import { Prereqs } from "TSTransformer/classes/Prereqs";
 import { transformParameters } from "TSTransformer/nodes/transformParameters";
 import { transformPropertyName } from "TSTransformer/nodes/transformPropertyName";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
+import { hasNativeTag } from "TSTransformer/util/hasNativeTag";
 import { isMethod } from "TSTransformer/util/isMethod";
 import { assignToMapPointer, Pointer } from "TSTransformer/util/pointer";
 import { wrapStatementsAsGenerator } from "TSTransformer/util/wrapStatementsAsGenerator";
@@ -18,6 +19,9 @@ export function transformMethodDeclaration(
 	node: ts.MethodDeclaration,
 	ptr: Pointer<luau.Map | luau.AnyIdentifier>,
 ) {
+	if (hasNativeTag(node)) {
+		state.hasNativeDirective = true;
+	}
 	const result = luau.list.make<luau.Statement>();
 
 	if (!node.body) {

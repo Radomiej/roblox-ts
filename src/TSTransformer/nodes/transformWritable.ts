@@ -68,11 +68,18 @@ export function transformWritableAssignment(
 	const valueEffects = getEffects(value);
 	const effects = joinEffects(prereqEffects, valueEffects);
 	writable = captureWritableAssignmentTarget(prereqs, writable, prereqEffects, valueEffects);
-	// the assignment target and its old value may need separate snapshots
-	const readable =
-		readBeforeWrite && !effectsCommute(getEffects(writable), effects)
-			? prereqs.pushToVar(writable, "readable")
-			: writable;
+	// a separate read must reuse the exact reference captured for the later write
+	const snapshotRead = readBeforeWrite && !effectsCommute(getEffects(writable), effects);
+	if (snapshotRead && !luau.isAnyIdentifier(writable)) {
+		const expression = prereqs.pushToVarIfNonId(writable.expression, "exp");
+		writable = luau.isComputedIndexExpression(writable)
+			? luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+					expression,
+					index: prereqs.pushToVarIfComplex(writable.index, "index"),
+				})
+			: luau.property(expression, writable.name);
+	}
+	const readable = snapshotRead ? prereqs.pushToVar(writable, "readable") : writable;
 	prereqs.pushList(valuePrereqs.statements);
 
 	return { writable, readable, value };

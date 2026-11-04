@@ -7,7 +7,7 @@ const config: Config = {
 	maxWorkers: process.env.GITHUB_ACTIONS === "true" && process.platform === "darwin" ? 2 : "100%",
 	workerIdleMemoryLimit: "512MB",
 	testMatch: ["<rootDir>/tests/compiler/**/*.test.ts"],
-	modulePathIgnorePatterns: ["<rootDir>/out/"],
+	modulePathIgnorePatterns: ["<rootDir>/out/", "<rootDir>/.stryker-tmp/"],
 	moduleNameMapper: {
 		"^(Project|Shared|CLI|TSTransformer)/(.*)$": "<rootDir>/src/$1/$2",
 		"^(Project|Shared|CLI|TSTransformer)$": "<rootDir>/src/$1",

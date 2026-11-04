@@ -14,6 +14,7 @@ import {
 	isSharedTableType,
 	isStringType,
 } from "TSTransformer/util/types";
+import { unboxMapValue } from "TSTransformer/util/unboxMapValue";
 import ts from "typescript";
 
 interface BindingAccessor {
@@ -131,6 +132,8 @@ function createFunctionAccessor(iterator: luau.AnyIdentifier, tuple: boolean) {
 }
 
 function createCollectionAccessor(
+	state: TransformState,
+	node: ts.Node,
 	prereqs: Prereqs,
 	parentId: luau.AnyIdentifier,
 	map: boolean,
@@ -180,7 +183,10 @@ function createCollectionAccessor(
 				}),
 			);
 		}
-		return { value: member ? luau.array([key, member]) : key, done: luau.binary(key, "==", luau.nil()) };
+		return {
+			value: member ? luau.array([unboxMapValue(state, node, key), unboxMapValue(state, node, member)]) : key,
+			done: luau.binary(key, "==", luau.nil()),
+		};
 	}, map);
 
 	return {
@@ -273,6 +279,8 @@ export function createArrayBindingAccessor(
 
 	if (isDefinitelyType(type, isSetType(state)) || isDefinitelyType(type, isMapType(state))) {
 		return createCollectionAccessor(
+			state,
+			node,
 			prereqs,
 			parentId,
 			isDefinitelyType(type, isMapType(state)),

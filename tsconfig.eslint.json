@@ -1,7 +1,15 @@
 {
 	"extends": "./tsconfig-base.json",
-	"include": ["eslint.config.ts"],
+	"include": [
+		"eslint.config.ts",
+		"jest.*.config.ts",
+		"stryker.*.config.mjs",
+		"tests/js-support/**/*.ts",
+		"tests/ts-mutation/*.ts"
+	],
 	"compilerOptions": {
-		"rootDir": "."
+		"rootDir": ".",
+		"allowJs": true,
+		"types": ["node", "jest", "ts-expose-internals"]
 	}
 }

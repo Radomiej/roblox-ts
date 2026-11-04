@@ -128,10 +128,11 @@ return nil
 `;
 
 exports[`macro emit known function with no external effects 1`] = `
-"local function value()
+"local TS = _G[script]
+local function value()
 	return 1
 end
-map.key = value()
+map[if "key" == nil then TS.__undefined else "key"] = if value() == nil then TS.__undefined else value()
 return nil
 "
 `;
@@ -410,7 +411,9 @@ return nil
 `;
 
 exports[`macro emit single map assignment 1`] = `
-"map.key = value()
+"local TS = _G[script]
+local _arg1 = value()
+map[if "key" == nil then TS.__undefined else "key"] = if _arg1 == nil then TS.__undefined else _arg1
 return nil
 "
 `;

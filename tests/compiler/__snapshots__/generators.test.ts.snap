@@ -4,7 +4,8 @@ exports[`captures the delegated next function once and forwards resume inputs 1`
 "local TS = _G[script]
 local function delegate()
 	return TS.generator(function()
-		local _next = getIterator().next
+		local _iterator = getIterator()
+		local _next = _iterator.next
 		local _currentInput
 		local _returnValue
 		while true do
@@ -14,6 +15,13 @@ local function delegate()
 				break
 			end
 			_currentInput = coroutine.yield(_result.value)
+			if _currentInput == TS.GENERATOR_RETURN then
+				local _returnMethod = _iterator["return"]
+				if _returnMethod then
+					_returnMethod(_iterator)
+				end
+				error(TS.GENERATOR_RETURN)
+			end
 		end
 		return _returnValue
 	end)

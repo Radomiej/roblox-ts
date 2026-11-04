@@ -17,6 +17,7 @@ import { transformMethodDeclaration } from "TSTransformer/nodes/transformMethodD
 import { findConstructor } from "TSTransformer/util/findConstructor";
 import { getExtendsNode } from "TSTransformer/util/getExtendsNode";
 import { getKindName } from "TSTransformer/util/getKindName";
+import { hasNativeTag } from "TSTransformer/util/hasNativeTag";
 import { validateIdentifier } from "TSTransformer/util/validateIdentifier";
 import { validateMethodAssignment } from "TSTransformer/util/validateMethodAssignment";
 import ts from "typescript";
@@ -197,6 +198,9 @@ function isClassHoisted(state: TransformState, node: ts.ClassLikeDeclaration) {
 }
 
 export function transformClassLikeDeclaration(state: TransformState, node: ts.ClassLikeDeclaration) {
+	if (hasNativeTag(node)) {
+		state.hasNativeDirective = true;
+	}
 	const isClassExpression = ts.isClassExpression(node);
 	const statements = luau.list.make<luau.Statement>();
 

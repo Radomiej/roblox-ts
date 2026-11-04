@@ -1,59 +1,123 @@
 name: Publish
-run-name: Publish ${{ inputs.version || 'next' }} (@${{ github.actor }})
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Version to publish. Leave empty to publish a @next build.
-        required: false
-        type: string
-  schedule:
-    - cron: '0 7 * * *'
+  push:
+    branches:
+      - main
 
 jobs:
-  publish:
-    if: github.repository == 'roblox-ts/roblox-ts' && github.ref == 'refs/heads/master'
+  verify:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write # required for npm trusted publishing (OIDC)
-      contents: write # required to push the version bump commit and tags
+      contents: read
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v7
+      - name: Check out roblox-ts
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.pat }}
+          path: roblox-ts
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - name: Check out compiler-types
+        uses: actions/checkout@v4
+        with:
+          repository: Radomiej/compiler-types
+          ref: main
+          path: compiler-types
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
 
-      - name: Update npm
-        run: npm install -g npm@latest # trusted publishing requires npm >= 11.5.1
-
-      - name: Install NPM Dependencies
-        uses: bahmutov/npm-install@v1
-
-      - name: Publish @next
-        if: inputs.version == ''
+      - name: Install compiler-types dependencies and lint
+        working-directory: compiler-types
         run: |
-          VERSION="$(jq -r .version package.json)-dev-$(git rev-parse --short HEAD)"
-          NAME="$(jq -r .name package.json)"
-          if [ -n "$(npm view "$NAME@$VERSION" version 2>/dev/null)" ]; then
-            echo "$NAME@$VERSION has already been published, skipping."
-            exit 0
+          npm ci --no-audit --no-fund
+          npm run eslint
+
+      - name: Install roblox-ts dependencies
+        working-directory: roblox-ts
+        run: npm ci --no-audit --no-fund
+
+      - name: Install test dependencies
+        working-directory: roblox-ts/tests
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Lune and Rojo
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/roblox-tools"
+          mkdir -p "$tool_dir"
+          curl --fail --location --retry 2 --max-time 120 https://github.com/lune-org/lune/releases/download/v0.8.9/lune-0.8.9-linux-x86_64.zip -o "$RUNNER_TEMP/lune.zip"
+          printf '%s  %s\n' eb30bdde967ba97951a4e0cafa0a197396ddd68dfc58e1b60349129c178eee8b "$RUNNER_TEMP/lune.zip" | sha256sum --check -
+          unzip -o "$RUNNER_TEMP/lune.zip" -d "$tool_dir"
+          curl --fail --location --retry 2 --max-time 120 https://github.com/rojo-rbx/rojo/releases/download/v7.4.4/rojo-7.4.4-linux-x86_64.zip -o "$RUNNER_TEMP/rojo.zip"
+          printf '%s  %s\n' 784e2cd42af3d565826c4910df94f45080fc7ed6206eb6808dbc79b516323652 "$RUNNER_TEMP/rojo.zip" | sha256sum --check -
+          unzip -o "$RUNNER_TEMP/rojo.zip" -d "$tool_dir"
+          chmod +x "$tool_dir"/*
+          echo "$tool_dir" >> "$GITHUB_PATH"
+
+      - name: Run roblox-ts checks
+        working-directory: roblox-ts
+        run: |
+          npm run eslint
+          npm test
+          npm pack --dry-run
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out roblox-ts
+        uses: actions/checkout@v4
+        with:
+          path: roblox-ts
+
+      - name: Check out compiler-types
+        uses: actions/checkout@v4
+        with:
+          repository: Radomiej/compiler-types
+          ref: main
+          path: compiler-types
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Ensure npm supports Trusted Publishing
+        run: |
+          set -euo pipefail
+          npm_is_supported() {
+            node -e 'const [major, minor, patch] = require("child_process").execSync("npm --version", {encoding: "utf8"}).trim().split(".").map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) process.exit(1)'
+          }
+          if ! npm_is_supported; then
+            npm install --global 'npm@^11.5.1'
           fi
-          npm version --no-git-tag-version "$VERSION"
-          npm publish --tag next
+          npm_is_supported
 
-      - name: Publish
-        if: inputs.version != ''
+      - name: Install roblox-ts dependencies
+        working-directory: roblox-ts
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish if this version is new
+        working-directory: roblox-ts
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "noreply@github.com"
-          npm version ${{ inputs.version }}
-          npm publish
-          git push
-          git push --tags
+          set -euo pipefail
+          package=$(node -p 'require("./package.json").name')
+          version=$(node -p 'require("./package.json").version')
+          error_file="$RUNNER_TEMP/npm-view-error.txt"
+          if npm view "$package@$version" version >/dev/null 2>"$error_file"; then
+            echo "$package@$version is already published; skipping."
+          elif grep -Eq 'E404|404 Not Found' "$error_file"; then
+            publish_args=(--provenance --access public)
+            if [[ "$version" == *-* ]]; then
+              publish_args+=(--tag beta)
+            fi
+            npm publish "${publish_args[@]}"
+          else
+            cat "$error_file" >&2
+            exit 1
+          fi

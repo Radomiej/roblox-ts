@@ -7,6 +7,7 @@ import { transformIdentifierDefined } from "TSTransformer/nodes/expressions/tran
 import { transformParameters } from "TSTransformer/nodes/transformParameters";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
 import { getFunctionEffects } from "TSTransformer/util/evaluation/effects";
+import { hasNativeTag } from "TSTransformer/util/hasNativeTag";
 import { validateIdentifier } from "TSTransformer/util/validateIdentifier";
 import { wrapStatementsAsGenerator } from "TSTransformer/util/wrapStatementsAsGenerator";
 import ts from "typescript";
@@ -22,6 +23,9 @@ export function transformFunctionDeclaration(state: TransformState, node: ts.Fun
 
 	if (node.name) {
 		validateIdentifier(node.name);
+	}
+	if (hasNativeTag(node)) {
+		state.hasNativeDirective = true;
 	}
 
 	const name = node.name ? transformIdentifierDefined(state, node.name) : luau.id("default");

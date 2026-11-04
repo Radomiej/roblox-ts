@@ -24,6 +24,7 @@ export const SYMBOL_NAMES = {
 	WeakMapConstructor: "WeakMapConstructor",
 	ReadonlyMapConstructor: "ReadonlyMapConstructor",
 	ReadonlySetConstructor: "ReadonlySetConstructor",
+	SymbolConstructor: "SymbolConstructor",
 
 	Array: "Array",
 	Generator: "Generator",
@@ -38,6 +39,7 @@ export const SYMBOL_NAMES = {
 	Set: "Set",
 	SharedTable: "SharedTable",
 	String: "String",
+	Symbol: "Symbol",
 	TemplateStringsArray: "TemplateStringsArray",
 	WeakMap: "WeakMap",
 	WeakSet: "WeakSet",

@@ -1,5 +1,6 @@
 import { PathTranslator } from "@roblox-ts/path-translator";
 import path from "path";
+import { JavaScriptPathTranslator } from "Project/functions/createPathTranslator";
 import { createProjectData } from "Project/functions/createProjectData";
 import { getParsedCommandLine } from "Project/functions/getParsedCommandLine";
 import { getRojoProject } from "Project/functions/getRojoProject";
@@ -140,7 +141,8 @@ export class ProjectGraph {
 
 				const buildInfoPath = ts.getTsBuildInfoEmitOutputFilePath(config.options);
 
-				pathTranslator = new PathTranslator(
+				const Translator = config.options.allowJs === true ? JavaScriptPathTranslator : PathTranslator;
+				pathTranslator = new Translator(
 					rootDir,
 					path.normalize(config.options.outDir),
 					buildInfoPath && path.normalize(buildInfoPath),

@@ -8,7 +8,7 @@ import { ProjectData, ProjectOptions } from "Shared/types";
 import ts from "typescript";
 
 // npm allows any non-empty scope, including `.`, `_`, and `~`
-const PACKAGE_REGEX = /^@[^/]+\//;
+const PACKAGE_REGEX = /^@(?![._])[a-z0-9._~-]+\/(?![._])[a-z0-9._~-]+$/i;
 
 export function createProjectData(tsConfigPath: string, projectOptions: ProjectOptions): ProjectData {
 	const projectPath = path.dirname(tsConfigPath);

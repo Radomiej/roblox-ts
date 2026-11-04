@@ -15,6 +15,9 @@ export function loadTestTypes(project: VirtualProject) {
 	const root = path.join(PACKAGE_ROOT, "tests/node_modules/@rbxts");
 	function load(directory: string) {
 		for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+			if (entry.isDirectory() && (entry.name === "node_modules" || entry.name === ".git")) {
+				continue;
+			}
 			const file = path.join(directory, entry.name);
 			if (entry.isDirectory()) {
 				load(file);

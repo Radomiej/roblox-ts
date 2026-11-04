@@ -2,6 +2,7 @@ import { renderAST } from "@roblox-ts/luau-ast";
 import { PathTranslator } from "@roblox-ts/path-translator";
 import { RojoResolver } from "@roblox-ts/rojo-resolver";
 import { PATH_SEP, pathJoin, VirtualFileSystem } from "Project/classes/VirtualFileSystem";
+import { JavaScriptPathTranslator } from "Project/functions/createPathTranslator";
 import { validateCompilerOptions } from "Project/functions/validateCompilerOptions";
 import { getCustomPreEmitDiagnostics } from "Project/util/getCustomPreEmitDiagnostics";
 import { DEFAULT_PROJECT_OPTIONS, NODE_MODULES, ProjectType, RBXTS_SCOPE } from "Shared/constants";
@@ -110,7 +111,8 @@ export class VirtualProject {
 		const typeChecker = this.program.getTypeChecker();
 
 		const services = createTransformServices(typeChecker);
-		const pathTranslator = new PathTranslator(ROOT_DIR, OUT_DIR, undefined, false, this.data.projectOptions.luau);
+		const Translator = this.compilerOptions.allowJs === true ? JavaScriptPathTranslator : PathTranslator;
+		const pathTranslator = new Translator(ROOT_DIR, OUT_DIR, undefined, false, this.data.projectOptions.luau);
 
 		const sourceFile = this.program.getSourceFile(PLAYGROUND_PATH);
 		assert(sourceFile);

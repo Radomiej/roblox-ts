@@ -15,16 +15,22 @@ jobs:
         with:
           path: roblox-ts
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - name: Checkout compiler-types
+        uses: actions/checkout@v4
+        with:
+          repository: Radomiej/compiler-types
+          ref: main
+          path: compiler-types
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 24
-          package-manager-cache: false
 
       - name: Setup roblox-ts repo
+        working-directory: roblox-ts
         run: |
-          cd roblox-ts
-          npm install
+          npm ci --no-audit --no-fund
           npm run build
 
       - name: Checkout roblox-ts.com repo

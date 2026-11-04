@@ -13,6 +13,7 @@ import { effectsCommute, getEffects, isLateRead, joinEffects, NO_EFFECTS } from 
 import { isMethod, isMethodFromType } from "TSTransformer/util/isMethod";
 import { getFirstDefinedSymbol, isPossiblyType, isRobloxType, isUndefinedType } from "TSTransformer/util/types";
 import { validateNotAnyType } from "TSTransformer/util/validateNotAny";
+import { wrapLuaTupleForIndexedCall } from "TSTransformer/util/wrapLuaTupleForIndexedCall";
 import { wrapReturnIfLuaTuple } from "TSTransformer/util/wrapReturnIfLuaTuple";
 import ts from "typescript";
 
@@ -92,7 +93,7 @@ export function transformCallExpressionInner(
 
 	const exp = luau.call(convertToIndexableExpression(expression), args);
 
-	return wrapReturnIfLuaTuple(state, node, exp);
+	return wrapLuaTupleForIndexedCall(state, node, wrapReturnIfLuaTuple(state, node, exp));
 }
 
 function createOrderedPropertyCall(
@@ -197,7 +198,7 @@ export function transformPropertyCallExpressionInner(
 		argsPrereqs.statements,
 		isMethod(state, expression),
 	);
-	return wrapReturnIfLuaTuple(state, node, exp);
+	return wrapLuaTupleForIndexedCall(state, node, wrapReturnIfLuaTuple(state, node, exp));
 }
 
 export function transformElementCallExpressionInner(
@@ -266,7 +267,7 @@ export function transformElementCallExpressionInner(
 		argsPrereqs.statements,
 		isMethod(state, expression),
 	);
-	return wrapReturnIfLuaTuple(state, node, exp);
+	return wrapLuaTupleForIndexedCall(state, node, wrapReturnIfLuaTuple(state, node, exp));
 }
 
 export function transformCallExpression(state: TransformState, prereqs: Prereqs, node: ts.CallExpression) {

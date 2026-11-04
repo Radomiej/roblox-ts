@@ -13,6 +13,7 @@ export default defineConfig(
 		languageOptions: {
 			parser: tseslint.parser,
 			parserOptions: {
+				tsconfigRootDir: __dirname,
 				ecmaVersion: "latest",
 				sourceType: "module",
 				project: [
@@ -70,7 +71,7 @@ export default defineConfig(
 		},
 	},
 	{
-		files: ["tests/compiler/**/*.ts"],
+		files: ["tests/compiler/**/*.ts", "tests/js-support/**/*.ts", "tests/ts-mutation/*.ts"],
 		rules: {
 			"no-restricted-imports": "off",
 		},
@@ -78,8 +79,12 @@ export default defineConfig(
 	{
 		ignores: [
 			".local/",
+			".stryker-tmp/",
+			"reports/",
+			"submodules/",
 			"node_modules/",
 			"tests/src/",
+			"tests/ts-mutation/fixture/",
 			"tests/projects/",
 			"tests/out/",
 			"tests/include/",

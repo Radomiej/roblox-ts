@@ -17,6 +17,7 @@ export interface ProjectOptions {
 	optimizedLoops: boolean;
 	allowCommentDirectives: boolean;
 	luau: boolean;
+	sourcemap: boolean;
 }
 
 export interface ProjectData {

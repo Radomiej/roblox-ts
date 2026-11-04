@@ -8,42 +8,64 @@ on:
 
 jobs:
   unit-tests:
-    name: Unit Tests (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: roblox-ts
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          path: roblox-ts
 
-      - name: Setup Node
+      - name: Checkout compiler-types
+        uses: actions/checkout@v4
+        with:
+          repository: Radomiej/compiler-types
+          ref: main
+          path: compiler-types
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
 
-      - name: Install Rokit
-        uses: roblox-ts/setup-rokit@v0.1.2
-
       - name: Install NPM Dependencies
-        uses: bahmutov/npm-install@v1
+        working-directory: roblox-ts
+        run: npm ci --no-audit --no-fund
 
-      - name: Update Test Types
-        run: npm run update-test-types
+      - name: Install test dependencies
+        working-directory: roblox-ts/tests
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Lune and Rojo
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/roblox-tools"
+          mkdir -p "$tool_dir"
+          curl --fail --location --retry 2 --max-time 120 https://github.com/lune-org/lune/releases/download/v0.8.9/lune-0.8.9-linux-x86_64.zip -o "$RUNNER_TEMP/lune.zip"
+          printf '%s  %s\n' eb30bdde967ba97951a4e0cafa0a197396ddd68dfc58e1b60349129c178eee8b "$RUNNER_TEMP/lune.zip" | sha256sum --check -
+          unzip -o "$RUNNER_TEMP/lune.zip" -d "$tool_dir"
+          curl --fail --location --retry 2 --max-time 120 https://github.com/rojo-rbx/rojo/releases/download/v7.4.4/rojo-7.4.4-linux-x86_64.zip -o "$RUNNER_TEMP/rojo.zip"
+          printf '%s  %s\n' 784e2cd42af3d565826c4910df94f45080fc7ed6206eb6808dbc79b516323652 "$RUNNER_TEMP/rojo.zip" | sha256sum --check -
+          unzip -o "$RUNNER_TEMP/rojo.zip" -d "$tool_dir"
+          chmod +x "$tool_dir"/*
+          echo "$tool_dir" >> "$GITHUB_PATH"
 
       - name: Run Tests
+        working-directory: roblox-ts
         run: npm test
 
       - name: Upload Test Output
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output-${{ matrix.os }}
-          path: tests/out
+          name: test-output
+          path: roblox-ts/tests/out
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
+          files: ./roblox-ts/coverage/lcov.info

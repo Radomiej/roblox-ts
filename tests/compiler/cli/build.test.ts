@@ -164,6 +164,7 @@ it("registers build flags without overriding project defaults", () => {
 		"rojo",
 		"allowCommentDirectives",
 		"luau",
+		"sourcemap",
 	]);
 	expect(option).toHaveBeenCalledWith("project", expect.objectContaining({ alias: "p", default: "." }));
 	expect(option).toHaveBeenCalledWith("usePolling", expect.objectContaining({ implies: "watch" }));

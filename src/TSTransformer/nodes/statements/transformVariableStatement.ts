@@ -215,15 +215,71 @@ export function transformVariableDeclaration(
 }
 
 export function isVarDeclaration(node: ts.VariableDeclarationList) {
-	return !(node.flags & ts.NodeFlags.Const) && !(node.flags & ts.NodeFlags.Let);
+	const flags = node.flags & (ts.NodeFlags.Const | ts.NodeFlags.Let | ts.NodeFlags.Using | ts.NodeFlags.AwaitUsing);
+	return flags === 0;
+}
+
+export function isUsingDeclaration(node: ts.VariableDeclarationList) {
+	const flags = node.flags & (ts.NodeFlags.Const | ts.NodeFlags.Let | ts.NodeFlags.Using | ts.NodeFlags.AwaitUsing);
+	return flags === ts.NodeFlags.Using;
+}
+
+export function isAwaitUsingDeclaration(node: ts.VariableDeclarationList) {
+	const flags = node.flags & (ts.NodeFlags.Const | ts.NodeFlags.Let | ts.NodeFlags.Using | ts.NodeFlags.AwaitUsing);
+	return flags === ts.NodeFlags.AwaitUsing;
+}
+
+export interface UsingDeclarationInfo {
+	id: luau.Expression;
+	isAwait: boolean;
+}
+
+function transformUsingDeclaration(
+	state: TransformState,
+	node: ts.VariableDeclarationList,
+	usingDeclarations: Array<UsingDeclarationInfo>,
+) {
+	const statements = luau.list.make<luau.Statement>();
+	const isAwait = isAwaitUsingDeclaration(node);
+
+	for (const declaration of node.declarations) {
+		if (!declaration.initializer || !ts.isIdentifier(declaration.name)) {
+			continue;
+		}
+
+		validateIdentifier(declaration.name);
+		const prereqs = new Prereqs();
+		const initializer = transformExpression(state, prereqs, declaration.initializer);
+		luau.list.pushList(statements, prereqs.statements);
+		const variablePrereqs = new Prereqs();
+		const id = transformVariable(state, variablePrereqs, declaration.name, initializer);
+		luau.list.pushList(statements, variablePrereqs.statements);
+		luau.list.push(
+			statements,
+			luau.create(luau.SyntaxKind.CallStatement, {
+				expression: luau.call(state.TS(node, "registerUsing"), [id, luau.bool(isAwait)]),
+			}),
+		);
+		usingDeclarations.push({ id, isAwait });
+	}
+
+	return statements;
 }
 
 export function transformVariableDeclarationList(
 	state: TransformState,
 	node: ts.VariableDeclarationList,
+	usingDeclarations?: Array<UsingDeclarationInfo>,
 ): luau.List<luau.Statement> {
 	if (isVarDeclaration(node)) {
 		DiagnosticService.addDiagnostic(errors.noVar(node));
+	}
+
+	if (isUsingDeclaration(node) || isAwaitUsingDeclaration(node)) {
+		if (usingDeclarations) {
+			return transformUsingDeclaration(state, node, usingDeclarations);
+		}
+		return luau.list.make();
 	}
 
 	const statements = luau.list.make<luau.Statement>();

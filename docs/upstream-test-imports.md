@@ -1,0 +1,17 @@
+# Selected upstream runtime tests
+
+`tests/src/tests/upstreamCompatibility.spec.ts` imports eleven focused runtime cases from `upstream/master` at `68648b0c633ef1016009aec7521b528f648ba656`. Each case name is retained from its source test so it can be located directly.
+
+- `tests/src/tests/switch.spec.ts`, `ecca939c`: “should evaluate each case expression once” and “should evaluate the switch expression only once”. The conditional case-expression regression was added in `ebe5de7e` under “should evaluate conditional case values against the original discriminant”.
+- `tests/src/tests/directCallReceivers.spec.ts`, `0e2169f7`: “should supply an undefined receiver to direct receiver calls”.
+- `tests/src/tests/prereqs.spec.ts`, `cc7668c1`: “should apply optimized assignment defaults after evaluating the tuple”; “should preserve single-value iterator and anonymous tuple iterator prerequisites”; “should evaluate tuple return and throw prerequisites before finally”; “should repeat loop prerequisites in order across continue”; “should evaluate nested assignment defaults in source order”; “should keep generator assignment prerequisites inside each iteration”; and “should preserve omitted iterable reads and discarded results”.
+
+## Why upstream refactored `Prereqs`
+
+Upstream built evaluation planning in `c6569e3d` (“Optimize macro evaluation and temporary placement”, `#3028`), then made prerequisite collection explicit in `cc7668c1` (`#3046`). The latter removed the implicit prerequisite-list stack from `TransformState`: expression and macro transforms receive a `Prereqs` collector, while each branch, loop, and callback can collect statements in its own scope. The enclosing transform then places those statements at the point where Luau must execute them. `0371c11b` (“refactor: preregs part 1”) is a local-only commit from 2025, outside upstream/master's ancestry, and is not part of upstream's refactor chronology.
+
+This scope is necessary because a prerequisite is executable code with an observable position. For example, a `while` condition that pops a value must run once for every condition check; a loop that continues must still run its condition and increment in order. A return value must be evaluated before its `finally` block runs. Destructuring must first read its source tuple, then apply defaults and write destinations in source order. If collection silently follows whichever stack happens to be active during recursive transformation, prerequisite statements can be hoisted outside a branch or loop, or can run before reads and mutations that TypeScript evaluates first.
+
+The local branch uses a mixed model: `Prereqs` owns its `statements` list and its `prereq` methods append directly to it, while `TransformState` separately retains `prereqStatementsStack`, `capture`, and `capturePrereqs` for implicit collection. The upstream change is therefore an architectural refactor of ownership and call flow, not simply a renamed collector. Its broad runtime coverage exercises the required placement and evaluation order at conditionals, loops, returns, macros, and destructuring sites.
+
+The imported tests avoid upstream-only fixture imports and newer syntax/type-system cases. In particular, tests for numeric-string index typing, later rest/destructuring grammar changes, and newer generic receiver behavior remain deferred; importing them here without their supporting compiler changes would produce unrelated diagnostics rather than useful runtime regressions.

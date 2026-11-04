@@ -4,7 +4,7 @@ import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
 import { isMethod } from "TSTransformer/util/isMethod";
 import { isValidMethodIndexWithoutCall } from "TSTransformer/util/isValidMethodIndexWithoutCall";
 import { skipUpwards } from "TSTransformer/util/traversal";
-import { getFirstDefinedSymbol, isPossiblyType } from "TSTransformer/util/types";
+import { getFirstDefinedSymbol, isPossiblyType, walkTypes } from "TSTransformer/util/types";
 import ts from "typescript";
 
 function isLengthPropertyName(state: TransformState, node: ts.PropertyName): boolean {
@@ -32,6 +32,14 @@ export function addIndexDiagnostics(
 
 	if (ts.isPrototypeAccess(node)) {
 		DiagnosticService.addDiagnostic(errors.noPrototype(node));
+	}
+
+	let hasBigInt = false;
+	walkTypes(receiverType, type => {
+		hasBigInt ||= !!(type.flags & ts.TypeFlags.BigIntLike);
+	});
+	if (hasBigInt) {
+		DiagnosticService.addDiagnostic(errors.noBigInt(node));
 	}
 
 	if (isPossiblyType(receiverType, state.typeChecker.isTupleType)) {

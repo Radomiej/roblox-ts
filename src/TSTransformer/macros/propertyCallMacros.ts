@@ -17,7 +17,10 @@ import ts from "typescript";
 
 function makeMathMethod(operator: luau.BinaryOperator): PropertyCallMacro {
 	return (state, prereqs, node, expression, args) => {
-		return luau.binary(expression, operator, args[0]);
+		const rhs = luau.isSimple(args[0])
+			? args[0]
+			: luau.create(luau.SyntaxKind.ParenthesizedExpression, { expression: args[0] });
+		return luau.binary(expression, operator, rhs);
 	};
 }
 
@@ -45,6 +48,23 @@ function makeStringCallback(strCallback: luau.PropertyAccessExpression): Propert
 	};
 }
 
+function encodeUndefinedMapKey(state: TransformState, prereqs: Prereqs, node: ts.Node, key: luau.Expression) {
+	key = prereqs.pushToVarIfComplex(key, "key");
+	return luau.create(luau.SyntaxKind.IfExpression, {
+		condition: luau.binary(key, "==", luau.nil()),
+		expression: state.TS(node, "__undefined"),
+		alternative: key,
+	});
+}
+
+function decodeUndefinedMapKey(state: TransformState, node: ts.Node, key: luau.Expression) {
+	return luau.create(luau.SyntaxKind.IfExpression, {
+		condition: luau.binary(key, "==", state.TS(node, "__undefined")),
+		expression: luau.nil(),
+		alternative: key,
+	});
+}
+
 const STRING_CALLBACKS: MacroList<PropertyCallMacro> = {
 	size: (state, prereqs, node, expression) => luau.unary("#", expression),
 
@@ -60,6 +80,30 @@ const STRING_CALLBACKS: MacroList<PropertyCallMacro> = {
 	split: makeStringCallback(luau.globals.string.split),
 	sub: makeStringCallback(luau.globals.string.sub),
 	upper: makeStringCallback(luau.globals.string.upper),
+
+	startsWith: (state, prereqs, node, expression, args) => {
+		const searchString = prereqs.pushToVarIfComplex(args[0], "search");
+		const string = prereqs.pushToVarIfComplex(expression, "str");
+		return luau.binary(
+			luau.call(luau.globals.string.sub, [string, luau.number(1), luau.unary("#", searchString)]),
+			"==",
+			searchString,
+		);
+	},
+
+	endsWith: (state, prereqs, node, expression, args) => {
+		const searchString = prereqs.pushToVarIfComplex(args[0], "search");
+		const string = prereqs.pushToVarIfComplex(expression, "str");
+		return luau.binary(
+			luau.binary(luau.unary("#", searchString), "==", luau.number(0)),
+			"or",
+			luau.binary(
+				luau.call(luau.globals.string.sub, [string, luau.unary("-", luau.unary("#", searchString))]),
+				"==",
+				searchString,
+			),
+		);
+	},
 };
 
 function makeEveryOrSomeMethod(
@@ -229,7 +273,8 @@ const READONLY_ARRAY_METHODS: MacroList<PropertyCallMacro> = {
 	some: makeSomeMethod((keyId, valueId, expression) => [valueId, offset(keyId, -1), expression]),
 
 	forEach: (state, prereqs, node, expression, args) => {
-		const callbackId = convertToIndexableExpression(args[0]);
+		expression = prereqs.pushToVarIfComplex(expression, "exp");
+		const callbackId = prereqs.pushToVarIfNonId(args[0], "callback");
 		const keyId = luau.tempId("k");
 		const valueId = luau.tempId("v");
 		prereqs.push(
@@ -730,6 +775,61 @@ const READONLY_SET_MAP_SHARED_METHODS: MacroList<PropertyCallMacro> = {
 	},
 };
 
+function mapHas(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.CallExpression,
+	expression: luau.Expression,
+	args: Array<luau.Expression>,
+) {
+	const key = encodeUndefinedMapKey(state, prereqs, node, args[0]);
+	return luau.binary(
+		luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+			expression: convertToIndexableExpression(expression),
+			index: key,
+		}),
+		"~=",
+		luau.nil(),
+	);
+}
+
+function mapDelete(
+	state: TransformState,
+	prereqs: Prereqs,
+	node: ts.CallExpression,
+	expression: luau.Expression,
+	args: Array<luau.Expression>,
+) {
+	const key = encodeUndefinedMapKey(state, prereqs, node, args[0]);
+	const map = prereqs.pushToVarIfComplex(expression, "map");
+	const valueIsUsed = !isUsedAsStatement(node);
+	let valueExistedId: luau.TemporaryIdentifier | undefined;
+	if (valueIsUsed) {
+		valueExistedId = prereqs.pushToVar(
+			luau.binary(
+				luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+					expression: convertToIndexableExpression(map),
+					index: convertToIndexableExpression(key),
+				}),
+				"~=",
+				luau.nil(),
+			),
+			"valueExisted",
+		);
+	}
+	prereqs.push(
+		luau.create(luau.SyntaxKind.Assignment, {
+			left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+				expression: convertToIndexableExpression(map),
+				index: convertToIndexableExpression(key),
+			}),
+			operator: "=",
+			right: luau.nil(),
+		}),
+	);
+	return valueIsUsed ? valueExistedId! : luau.none();
+}
+
 const SET_MAP_SHARED_METHODS: MacroList<PropertyCallMacro> = {
 	delete: (state, prereqs, node, expression, args) => {
 		const arg = args[0];
@@ -817,17 +917,26 @@ const SET_METHODS: MacroList<PropertyCallMacro> = {
 const READONLY_MAP_METHODS: MacroList<PropertyCallMacro> = {
 	...READONLY_SET_MAP_SHARED_METHODS,
 
+	has: mapHas,
+
 	forEach: (state, prereqs, node, expression, args) => {
-		const callbackId = convertToIndexableExpression(args[0]);
+		expression = prereqs.pushToVarIfComplex(expression, "exp");
+		const callbackId = prereqs.pushToVarIfNonId(args[0], "callback");
 		const keyId = luau.tempId("k");
 		const valueId = luau.tempId("v");
+		const safeValueId = luau.create(luau.SyntaxKind.IfExpression, {
+			condition: luau.binary(valueId, "==", state.TS(node, "__undefined")),
+			expression: luau.nil(),
+			alternative: valueId,
+		});
+		const safeKeyId = decodeUndefinedMapKey(state, node, keyId);
 		prereqs.push(
 			luau.create(luau.SyntaxKind.ForStatement, {
 				ids: luau.list.make(keyId, valueId),
 				expression,
 				statements: luau.list.make(
 					luau.create(luau.SyntaxKind.CallStatement, {
-						expression: luau.call(callbackId, [valueId, keyId, expression]),
+						expression: luau.call(callbackId, [safeValueId, safeKeyId, expression]),
 					}),
 				),
 			}),
@@ -836,27 +945,50 @@ const READONLY_MAP_METHODS: MacroList<PropertyCallMacro> = {
 		return !isUsedAsStatement(node) ? luau.nil() : luau.none();
 	},
 
-	get: (state, prereqs, node, expression, args) =>
-		luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-			expression: convertToIndexableExpression(expression),
-			index: args[0],
-		}),
+	get: (state, prereqs, node, expression, args) => {
+		const key = encodeUndefinedMapKey(state, prereqs, node, args[0]);
+		expression = prereqs.pushToVarIfComplex(expression, "exp");
+		const value = prereqs.pushToVar(
+			luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+				expression: convertToIndexableExpression(expression),
+				index: key,
+			}),
+			"value",
+		);
+		return luau.create(luau.SyntaxKind.IfExpression, {
+			condition: luau.binary(value, "==", state.TS(node, "__undefined")),
+			expression: luau.nil(),
+			alternative: value,
+		});
+	},
 };
 
 const MAP_METHODS: MacroList<PropertyCallMacro> = {
 	...SET_MAP_SHARED_METHODS,
 
+	delete: mapDelete,
+
 	set: (state, prereqs, node, expression, args) => {
 		const [keyExp, valueExp] = args;
 		const valueIsUsed = !isUsedAsStatement(node);
+		if (valueIsUsed) {
+			expression = prereqs.pushToVarIfComplex(expression, "exp");
+		}
+		const value = prereqs.pushToVarIfComplex(valueExp, "value");
+		const key = encodeUndefinedMapKey(state, prereqs, node, keyExp);
+		const safeValue = luau.create(luau.SyntaxKind.IfExpression, {
+			condition: luau.binary(value, "==", luau.nil()),
+			expression: state.TS(node, "__undefined"),
+			alternative: value,
+		});
 		prereqs.push(
 			luau.create(luau.SyntaxKind.Assignment, {
 				left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
 					expression: convertToIndexableExpression(expression),
-					index: keyExp,
+					index: key,
 				}),
 				operator: "=",
-				right: valueExp,
+				right: safeValue,
 			}),
 		);
 		return valueIsUsed ? expression : luau.none();
@@ -873,6 +1005,20 @@ const PROMISE_METHODS: MacroList<PropertyCallMacro> = {
 };
 
 export const PROPERTY_CALL_MACROS: { [className: string]: MacroList<PropertyCallMacro> } = {
+	Add: { add: makeMathMethod("+") },
+	Sub: { sub: makeMathMethod("-") },
+	Mul: { mul: makeMathMethod("*") },
+	Div: { div: makeMathMethod("/") },
+	IDiv: { idiv: makeMathMethod("//") },
+	Mod: { mod: makeMathMethod("%") },
+	Pow: { pow: makeMathMethod("^") },
+	Concat: { concat: makeMathMethod("..") },
+	Eq: { eq: makeMathMethod("==") },
+	Lt: { lt: makeMathMethod("<") },
+	Le: { le: makeMathMethod("<=") },
+	Unm: { unm: (state, prereqs, node, expression) => luau.unary("-", expression) },
+	Len: { len: (state, prereqs, node, expression) => luau.unary("#", expression) },
+
 	// math classes
 	CFrame: makeMathSet("+", "-", "*"),
 	UDim: makeMathSet("+", "-"),

@@ -14,6 +14,28 @@ function wrapWeak(state: TransformState, prereqs: Prereqs, node: ts.NewExpressio
 	]);
 }
 
+function wrapUndefinedMapValue(state: TransformState, prereqs: Prereqs, node: ts.Node, value: luau.Expression) {
+	if (!luau.isSimple(value)) {
+		value = prereqs.pushToVar(value, "value");
+	}
+	return luau.create(luau.SyntaxKind.IfExpression, {
+		condition: luau.binary(value, "==", luau.nil()),
+		expression: state.TS(node, "__undefined"),
+		alternative: value,
+	});
+}
+
+function wrapUndefinedMapKey(state: TransformState, prereqs: Prereqs, node: ts.Node, key: luau.Expression) {
+	if (!luau.isSimple(key)) {
+		key = prereqs.pushToVar(key, "key");
+	}
+	return luau.create(luau.SyntaxKind.IfExpression, {
+		condition: luau.binary(key, "==", luau.nil()),
+		expression: state.TS(node, "__undefined"),
+		alternative: key,
+	});
+}
+
 const ArrayConstructor: ConstructorMacro = (state, prereqs, node) => {
 	if (node.arguments && node.arguments.length > 0) {
 		const args = ensureTransformOrder(state, prereqs, node.arguments);
@@ -64,30 +86,43 @@ const MapConstructor: ConstructorMacro = (state, prereqs, node) => {
 			// non-null and type assertion because array will always have 2 members,
 			// due to map constructor typing
 			assert(luau.isArray(e) && luau.list.isNonEmpty(e.members));
-			return [e.members.head.value, e.members.head.next!.value] as [luau.Expression, luau.Expression];
+			return [
+				wrapUndefinedMapKey(state, prereqs, node, e.members.head.value),
+				wrapUndefinedMapValue(state, prereqs, node, e.members.head.next!.value),
+			] as [luau.Expression, luau.Expression];
 		});
 		return luau.map(elements);
 	} else {
 		const id = prereqs.pushToVar(luau.map(), "map");
 		const valueId = luau.tempId("v");
+		const elementKeyId = luau.tempId("key");
+		const elementValueId = luau.tempId("value");
 		prereqs.push(
 			luau.create(luau.SyntaxKind.ForStatement, {
 				ids: luau.list.make<luau.AnyIdentifier>(luau.tempId(), valueId),
 				expression: transformed,
-				statements: luau.list.make(
-					luau.create(luau.SyntaxKind.Assignment, {
-						left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-							expression: id,
-							index: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-								expression: valueId,
-								index: luau.number(1),
-							}),
+				statements: luau.list.make<luau.Statement>(
+					luau.create(luau.SyntaxKind.VariableDeclaration, {
+						left: elementKeyId,
+						right: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+							expression: valueId,
+							index: luau.number(1),
 						}),
-						operator: "=",
+					}),
+					luau.create(luau.SyntaxKind.VariableDeclaration, {
+						left: elementValueId,
 						right: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
 							expression: valueId,
 							index: luau.number(2),
 						}),
+					}),
+					luau.create(luau.SyntaxKind.Assignment, {
+						left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+							expression: id,
+							index: wrapUndefinedMapKey(state, prereqs, node, elementKeyId),
+						}),
+						operator: "=",
+						right: wrapUndefinedMapValue(state, prereqs, node, elementValueId),
 					}),
 				),
 			}),

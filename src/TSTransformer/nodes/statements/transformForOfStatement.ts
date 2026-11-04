@@ -12,7 +12,6 @@ import { transformInitializer } from "TSTransformer/nodes/transformInitializer";
 import { transformStatementList } from "TSTransformer/nodes/transformStatementList";
 import { transformWritableExpression } from "TSTransformer/nodes/transformWritable";
 import { arrayLikeExpressionContainsSpread } from "TSTransformer/util/arrayLikeExpressionContainsSpread";
-import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
 import { ensureTransformOrder } from "TSTransformer/util/ensureTransformOrder";
 import { getLiteralNumberValue } from "TSTransformer/util/getLiteralNumberValue";
 import { getStatements } from "TSTransformer/util/getStatements";
@@ -212,14 +211,16 @@ function transformInLineArrayAssignmentPattern(
 }
 
 const buildMapLoop: LoopBuilder = makeForLoopBuilder((state, prereqs, initializer, exp, ids, initializers) => {
-	// TEST
-	if (ts.isVariableDeclarationList(initializer)) {
+	const isMap =
+		ts.isForOfStatement(initializer.parent) &&
+		isDefinitelyType(state.getType(initializer.parent.expression), isMapType(state));
+	if (!isMap && ts.isVariableDeclarationList(initializer)) {
 		const name = initializer.declarations[0].name;
 		if (ts.isArrayBindingPattern(name) && !arrayLikeExpressionContainsSpread(name)) {
 			transformInLineArrayBindingPattern(state, name, ids, initializers);
 			return exp;
 		}
-	} else if (ts.isArrayLiteralExpression(initializer) && !arrayLikeExpressionContainsSpread(initializer)) {
+	} else if (!isMap && ts.isArrayLiteralExpression(initializer) && !arrayLikeExpressionContainsSpread(initializer)) {
 		transformInLineArrayAssignmentPattern(state, initializer, ids, initializers);
 		return exp;
 	}
@@ -228,6 +229,32 @@ const buildMapLoop: LoopBuilder = makeForLoopBuilder((state, prereqs, initialize
 	const valueId = luau.tempId("v");
 	luau.list.push(ids, keyId);
 	luau.list.push(ids, valueId);
+	if (isMap) {
+		luau.list.push(
+			initializers,
+			luau.create(luau.SyntaxKind.Assignment, {
+				left: keyId,
+				operator: "=",
+				right: luau.create(luau.SyntaxKind.IfExpression, {
+					condition: luau.binary(keyId, "==", state.TS(initializer, "__undefined")),
+					expression: luau.nil(),
+					alternative: keyId,
+				}),
+			}),
+		);
+		luau.list.push(
+			initializers,
+			luau.create(luau.SyntaxKind.Assignment, {
+				left: valueId,
+				operator: "=",
+				right: luau.create(luau.SyntaxKind.IfExpression, {
+					condition: luau.binary(valueId, "==", state.TS(initializer, "__undefined")),
+					expression: luau.nil(),
+					alternative: valueId,
+				}),
+			}),
+		);
+	}
 
 	if (ts.isVariableDeclarationList(initializer)) {
 		const bindingList = luau.list.make<luau.Statement>();
@@ -388,9 +415,124 @@ const buildIterableFunctionLuaTupleLoop: (type: ts.Type) => LoopBuilder =
 		return builder(state, prereqs, statements, initializer, exp);
 	};
 
-const buildGeneratorLoop: LoopBuilder = makeForLoopBuilder((state, prereqs, initializer, exp, ids, initializers) => {
+function insertBefore(
+	list: luau.List<luau.Statement>,
+	node: luau.ListNode<luau.Statement>,
+	statements: luau.List<luau.Statement>,
+) {
+	if (luau.list.isEmpty(statements)) {
+		return;
+	}
+	luau.list.forEach(statements, statement => (statement.parent = node.value.parent));
+	if (node.prev) {
+		node.prev.next = statements.head;
+	} else {
+		list.head = statements.head;
+	}
+	statements.head!.prev = node.prev;
+	node.prev = statements.tail;
+	statements.tail!.next = node;
+}
+
+function createIteratorCloseStatements(iterator: luau.IndexableExpression) {
+	const returnMethod = luau.tempId("iteratorReturn");
+	return luau.list.make<luau.Statement>(
+		luau.create(luau.SyntaxKind.VariableDeclaration, {
+			left: returnMethod,
+			right: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+				expression: iterator,
+				index: luau.string("return"),
+			}),
+		}),
+		luau.create(luau.SyntaxKind.IfStatement, {
+			condition: returnMethod,
+			statements: luau.list.make(
+				luau.create(luau.SyntaxKind.CallStatement, {
+					expression: luau.call(returnMethod, [iterator]),
+				}),
+			),
+			elseBody: luau.list.make(),
+		}),
+	);
+}
+
+function addIteratorCloseBeforeAbruptExits(
+	statements: luau.List<luau.Statement>,
+	iterator: luau.IndexableExpression,
+	nestedLoop = false,
+) {
+	// Explicit break, return, and throw statements can be closed here. An exception thrown by an
+	// arbitrary call still escapes the loop without this generated close; covering that requires a
+	// protected loop body that preserves the current break/return/continue control-flow protocol.
+	let node = statements.head;
+	while (node) {
+		const statement = node.value;
+		const isErrorCall =
+			luau.isCallStatement(statement) &&
+			luau.isCall(statement.expression) &&
+			luau.isIdentifier(statement.expression.expression) &&
+			statement.expression.expression.name === "error";
+		const isBreak = luau.isBreakStatement(statement) && !nestedLoop;
+		if (isBreak || luau.isReturnStatement(statement) || isErrorCall) {
+			const closeStatements = luau.list.make<luau.Statement>();
+			if (luau.isReturnStatement(statement) && statement.expression !== undefined) {
+				const values = luau.list.isList(statement.expression)
+					? luau.list.toArray(statement.expression)
+					: [statement.expression];
+				const packed = luau.tempId("returnValues");
+				luau.list.push(
+					closeStatements,
+					luau.create(luau.SyntaxKind.VariableDeclaration, {
+						left: packed,
+						right: luau.call(luau.globals.table.pack, values),
+					}),
+				);
+				statement.expression = luau.call(luau.globals.table.unpack, [
+					packed,
+					luau.number(1),
+					luau.property(packed, "n"),
+				]);
+			} else if (isErrorCall && luau.isCallStatement(statement) && luau.isCall(statement.expression)) {
+				const thrownValue = luau.tempId("thrownValue");
+				luau.list.push(
+					closeStatements,
+					luau.create(luau.SyntaxKind.VariableDeclaration, {
+						left: thrownValue,
+						right: statement.expression.args.head?.value,
+					}),
+				);
+				statement.expression.args = luau.list.make(thrownValue);
+			}
+			luau.list.pushList(closeStatements, createIteratorCloseStatements(iterator));
+			insertBefore(statements, node, closeStatements);
+		}
+
+		if (luau.isDoStatement(statement)) {
+			addIteratorCloseBeforeAbruptExits(statement.statements, iterator, nestedLoop);
+		} else if (luau.isIfStatement(statement)) {
+			addIteratorCloseBeforeAbruptExits(statement.statements, iterator, nestedLoop);
+			if (luau.list.isList(statement.elseBody)) {
+				addIteratorCloseBeforeAbruptExits(statement.elseBody, iterator, nestedLoop);
+			} else {
+				addIteratorCloseBeforeAbruptExits(statement.elseBody.statements, iterator, nestedLoop);
+			}
+		} else if (
+			luau.isForStatement(statement) ||
+			luau.isNumericForStatement(statement) ||
+			luau.isWhileStatement(statement) ||
+			luau.isRepeatStatement(statement)
+		) {
+			addIteratorCloseBeforeAbruptExits(statement.statements, iterator, true);
+		}
+		node = node.next;
+	}
+}
+
+const buildGeneratorLoop: LoopBuilder = (state, prereqs, statements, initializer, exp) => {
+	const iterator = luau.tempId("iterator");
 	const loopId = luau.tempId("result");
-	luau.list.push(ids, loopId);
+	const ids = luau.list.make<luau.AnyIdentifier>(loopId);
+	const initializers = luau.list.make<luau.Statement>();
 
 	luau.list.push(
 		initializers,
@@ -421,8 +563,17 @@ const buildGeneratorLoop: LoopBuilder = makeForLoopBuilder((state, prereqs, init
 		);
 	}
 
-	return luau.property(convertToIndexableExpression(exp), "next");
-});
+	addIteratorCloseBeforeAbruptExits(statements, iterator);
+	luau.list.unshiftList(statements, initializers);
+	return luau.list.make<luau.Statement>(
+		luau.create(luau.SyntaxKind.VariableDeclaration, { left: iterator, right: exp }),
+		luau.create(luau.SyntaxKind.ForStatement, {
+			ids,
+			expression: luau.property(iterator, "next"),
+			statements,
+		}),
+	);
+};
 
 function getLoopBuilder(state: TransformState, node: ts.Node, type: ts.Type): LoopBuilder {
 	if (isDefinitelyType(type, isArrayType(state))) {

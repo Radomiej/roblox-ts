@@ -17,7 +17,18 @@ export class ReferenceFixture {
 	private readonly builds = new Array<ProjectBuild>();
 
 	constructor(private readonly projectOptions: Partial<ProjectOptions> = {}) {
-		fs.copySync(path.join(PACKAGE_ROOT, "tests/node_modules"), this.file("node_modules"));
+		const modules = path.join(PACKAGE_ROOT, "tests/node_modules");
+		fs.copySync(modules, this.file("node_modules"), {
+			dereference: true,
+			filter: source => {
+				const relative = path.relative(modules, source).split(path.sep).join("/");
+				const prefix = "@rbxts/compiler-types/";
+				if (!relative.startsWith(prefix)) return true;
+				const entry = relative.slice(prefix.length);
+				// A local file dependency links to the whole checkout, but fixtures need only its packed type surface.
+				return entry === "package.json" || entry === "types" || entry.startsWith("types/");
+			},
+		});
 
 		this.json("package.json", { name: "reference-fixture", version: "1.0.0" });
 		this.json("base.json", {

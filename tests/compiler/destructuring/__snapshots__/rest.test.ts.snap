@@ -322,7 +322,7 @@ exports[`preserves rest destructuring emit for generator completion 1`] = `
 "local TS = _G[script]
 local function values()
 	return TS.generator(function()
-		coroutine.yield(1)
+		TS.yield(1)
 		return 99
 	end)
 end
@@ -360,12 +360,13 @@ return nil
 `;
 
 exports[`preserves rest destructuring emit for map first element 1`] = `
-"local function read(source)
+"local TS = _G[script]
+local function read(source)
 	local _key
 	local _value
 	_key, _value = next(source, _key)
 	local _done = _key == nil
-	local first = if _done then nil else { _key, _value }
+	local first = if _done then nil else { if _key == TS.__undefined then nil else _key, if _value == TS.__undefined then nil else _value }
 	return first
 end
 return nil
@@ -373,9 +374,12 @@ return nil
 `;
 
 exports[`preserves rest destructuring emit for map loop rest 1`] = `
-"for _k, _v in {
-	a = 42,
+"local TS = _G[script]
+for _k, _v in {
+	[if "a" == nil then TS.__undefined else "a"] = if 42 == nil then TS.__undefined else 42,
 } do
+	_k = if _k == TS.__undefined then nil else _k
+	_v = if _v == TS.__undefined then nil else _v
 	local _binding = { _k, _v }
 	local key = _binding[1]
 	local rest = table.move(_binding, 2, #_binding, 1, {})
@@ -386,7 +390,8 @@ return nil
 `;
 
 exports[`preserves rest destructuring emit for map prefix and rest 1`] = `
-"local function read(source)
+"local TS = _G[script]
+local function read(source)
 	local _key
 	local _value
 	_key, _value = next(source, _key)
@@ -395,7 +400,7 @@ exports[`preserves rest destructuring emit for map prefix and rest 1`] = `
 	if _key ~= nil then
 		_consumed[_key] = true
 	end
-	local first = if _done then nil else { _key, _value }
+	local first = if _done then nil else { if _key == TS.__undefined then nil else _key, if _value == TS.__undefined then nil else _value }
 	if not _done then
 		if _key ~= nil and source[_key] == nil then
 			_key = nil
@@ -425,7 +430,7 @@ exports[`preserves rest destructuring emit for map prefix and rest 1`] = `
 				break
 			end
 			_length += 1
-			_rest[_length] = { _key, _value_1 }
+			_rest[_length] = { if _key == TS.__undefined then nil else _key, if _value_1 == TS.__undefined then nil else _value_1 }
 		end
 	end
 	local rest = _rest

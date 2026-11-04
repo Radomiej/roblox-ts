@@ -16,6 +16,7 @@ import {
 	isSharedTableType,
 	isStringType,
 } from "TSTransformer/util/types";
+import { unboxMapValue } from "TSTransformer/util/unboxMapValue";
 import { valueToIdStr } from "TSTransformer/util/valueToIdStr";
 import ts from "typescript";
 
@@ -124,47 +125,50 @@ const addString = createForLoopArrayBuilder("char", expression =>
 const addSet = createForLoopArrayBuilder("v");
 const addIterableFunction = createForLoopArrayBuilder("result");
 
-const addMap: AddIterableToArrayBuilder = (prereqs, expression, arrayId, lengthId, amtElementsSinceUpdate) => {
-	const result = luau.list.make<luau.Statement>();
+function createMapArrayBuilder(decode: (value: luau.AnyIdentifier) => luau.Expression): AddIterableToArrayBuilder {
+	return (prereqs, expression, arrayId, lengthId, amtElementsSinceUpdate) => {
+		const result = luau.list.make<luau.Statement>();
 
-	if (amtElementsSinceUpdate > 0) {
-		luau.list.push(
-			result,
-			luau.create(luau.SyntaxKind.Assignment, {
-				left: lengthId,
-				operator: "+=",
-				right: luau.number(amtElementsSinceUpdate),
-			}),
-		);
-	}
-
-	const keyId = luau.tempId("k");
-	const valueId = luau.tempId("v");
-	luau.list.push(
-		result,
-		luau.create(luau.SyntaxKind.ForStatement, {
-			ids: luau.list.make(keyId, valueId),
-			expression,
-			statements: luau.list.make<luau.Statement>(
+		if (amtElementsSinceUpdate > 0) {
+			luau.list.push(
+				result,
 				luau.create(luau.SyntaxKind.Assignment, {
 					left: lengthId,
 					operator: "+=",
-					right: luau.number(1),
+					right: luau.number(amtElementsSinceUpdate),
 				}),
-				luau.create(luau.SyntaxKind.Assignment, {
-					left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
-						expression: arrayId,
-						index: lengthId,
-					}),
-					operator: "=",
-					right: luau.array([keyId, valueId]),
-				}),
-			),
-		}),
-	);
+			);
+		}
 
-	return result;
-};
+		const keyId = luau.tempId("k");
+		const valueId = luau.tempId("v");
+		luau.list.push(
+			result,
+			luau.create(luau.SyntaxKind.ForStatement, {
+				ids: luau.list.make(keyId, valueId),
+				expression,
+				statements: luau.list.make<luau.Statement>(
+					luau.create(luau.SyntaxKind.Assignment, {
+						left: lengthId,
+						operator: "+=",
+						right: luau.number(1),
+					}),
+					luau.create(luau.SyntaxKind.Assignment, {
+						left: luau.create(luau.SyntaxKind.ComputedIndexExpression, {
+							expression: arrayId,
+							index: lengthId,
+						}),
+						operator: "=",
+						right: luau.array([decode(keyId), decode(valueId)]),
+					}),
+				),
+			}),
+		);
+
+		return result;
+	};
+}
+const addMap = createMapArrayBuilder(value => value);
 
 const addIterableFunctionLuaTuple: AddIterableToArrayBuilder = (
 	prereqs,
@@ -288,7 +292,9 @@ export function getAddIterableToArrayBuilder(
 	} else if (isDefinitelyType(type, isSetType(state))) {
 		return addSet;
 	} else if (isDefinitelyType(type, isMapType(state)) || isDefinitelyType(type, isSharedTableType(state))) {
-		return addMap;
+		return isDefinitelyType(type, isMapType(state))
+			? createMapArrayBuilder(value => unboxMapValue(state, node, value))
+			: addMap;
 	} else if (isDefinitelyType(type, isIterableFunctionLuaTupleType(state))) {
 		return addIterableFunctionLuaTuple;
 	} else if (isDefinitelyType(type, isIterableFunctionType(state))) {

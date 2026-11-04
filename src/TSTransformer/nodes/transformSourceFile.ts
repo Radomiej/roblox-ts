@@ -235,6 +235,9 @@ export function transformSourceFile(state: TransformState, node: ts.SourceFile) 
 	}
 
 	const headerStatements = luau.list.make<luau.Statement>();
+	if (state.hasNativeDirective) {
+		luau.list.push(headerStatements, luau.comment("!native"));
+	}
 
 	// add build information to the tree
 	if (!state.data.projectOptions.noCompilerHeader) {

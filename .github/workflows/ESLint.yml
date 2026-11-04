@@ -10,18 +10,40 @@ jobs:
   lint:
     name: ESLint
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: roblox-ts
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v4
+        with:
+          path: roblox-ts
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - name: Checkout compiler-types
+        uses: actions/checkout@v4
+        with:
+          repository: Radomiej/compiler-types
+          ref: main
+          path: compiler-types
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 24
-          package-manager-cache: false
 
       - name: Install NPM Dependencies
-        uses: bahmutov/npm-install@v1
+        working-directory: roblox-ts
+        run: npm ci --no-audit --no-fund
+
+      - name: Cache ESLint
+        uses: actions/cache@v4.3.0
+        with:
+          key: eslint-cache-${{ runner.os }}-${{ hashFiles('roblox-ts/**/package-lock.json', 'roblox-ts/eslint.config.*') }}-${{ github.run_id }}
+          path: roblox-ts/.eslintcache
+          restore-keys: |
+            eslint-cache-${{ runner.os }}-${{ hashFiles('roblox-ts/**/package-lock.json', 'roblox-ts/eslint.config.*') }}-
+            eslint-cache-${{ runner.os }}-
 
       - name: Run ESLint
-        run: npm run eslint
+        working-directory: roblox-ts
+        run: npm run eslint:ci
